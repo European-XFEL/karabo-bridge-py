@@ -130,7 +130,7 @@ def start_gen(port, ser, det):
     source = set_detector_params(det)
 
     if ser == 'msgpack':
-        serialize = partial(msgpack.dumps, encoding='utf-8')
+        serialize = partial(msgpack.dumps, use_bin_type=True)
     elif ser == 'pickle':
         serialize = pickle.dumps
 
