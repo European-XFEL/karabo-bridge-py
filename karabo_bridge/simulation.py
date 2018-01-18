@@ -102,7 +102,7 @@ def generate(source, queue):
             if len(queue) < queue.maxlen:
                 data = gen_combined_detector_data(source)
                 queue.append(data)
-                print('buffered train:',
+                print('Server : buffered train:',
                         data[source]['metadata']['timestamp']['tid'])
             else:
                 sleep(0.1)
