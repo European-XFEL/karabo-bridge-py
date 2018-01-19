@@ -12,7 +12,7 @@ import zmq
 
 
 # AGIPD
-_PULSES = 32 
+_PULSES = 32
 _MODULES = 16
 _MOD_X = 512
 _MOD_Y = 128
@@ -20,7 +20,7 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
 # LPD
-# _PULSES = 32 
+# _PULSES = 32
 # _MODULES = 16
 # _MOD_X = 256
 # _MOD_Y = 256
@@ -29,7 +29,7 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 def gen_combined_detector_data(source):
     gen = {source: {}}
-    
+
     #metadata
     sec, frac = str(time()).split('.')
     tid = int(sec+frac[:1])
@@ -38,43 +38,43 @@ def gen_combined_detector_data(source):
         'timestamp': {'tid': tid,
             'sec': int(sec), 'frac': int(frac)
     }}
-    
+
     # detector random data
     rand_data = partial(np.random.uniform, low=1500, high=1600,
                         size=(_MOD_X, _MOD_Y))
     data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
     for pulse in range(_PULSES):
         for module in range(_MODULES):
-            data[pulse, module,] = rand_data()            
+            data[pulse, module,] = rand_data()
     cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
     length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
     trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid)
     status = np.zeros(_PULSES, dtype=np.uint16)
-    
+
     gen[source]['image.data'] = data
     gen[source]['image.cellId'] = cellId
     gen[source]['image.length'] = length
     gen[source]['image.pulseId'] = pulseId
     gen[source]['image.trainId'] = trainId
     gen[source]['image.status'] = status
-    
+
     checksum = np.ones(16, dtype=np.int8)
     magicNumberEnd = np.ones(8, dtype=np.int8)
     status = 0
     trainId = tid
-    
+
     gen[source]['trailer.checksum'] = checksum
     gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
     gen[source]['trailer.status'] = status
     gen[source]['trailer.trainId'] = trainId
-    
+
     data = np.ones(416, dtype=np.uint8)
     trainId = tid
-    
+
     gen[source]['detector.data'] = data
     gen[source]['detector.trainId'] = trainId
-    
+
     dataId = 0
     linkId = np.iinfo(np.uint64).max
     magicNumberBegin = np.ones(8, dtype=np.int8)
@@ -83,7 +83,7 @@ def gen_combined_detector_data(source):
     pulseCount = _PULSES
     reserved = np.ones(16, dtype=np.uint8)
     trainId = tid
-    
+
     gen[source]['header.dataId'] = dataId
     gen[source]['header.linkId'] = linkId
     gen[source]['header.magicNumberBegin'] = magicNumberBegin
@@ -92,7 +92,7 @@ def gen_combined_detector_data(source):
     gen[source]['header.pulseCount'] = pulseCount
     gen[source]['header.reserved'] = reserved
     gen[source]['header.trainId'] = tid
-    
+
     return gen
 
 
@@ -102,7 +102,7 @@ def generate(source, queue):
             if len(queue) < queue.maxlen:
                 data = gen_combined_detector_data(source)
                 queue.append(data)
-                print('buffered train:',
+                print('Server : buffered train:',
                         data[source]['metadata']['timestamp']['tid'])
             else:
                 sleep(0.1)
@@ -139,7 +139,7 @@ def start_gen(port, ser, det):
     t = Thread(target=generate, args=(source, queue,))
     t.daemon = True
     t.start()
-    
+
     try:
         while True:
             msg = socket.recv()
@@ -159,10 +159,10 @@ def start_gen(port, ser, det):
 
 def server_sim(port, *options):
     """"Karabo bridge server simulation.
-    
+
     Simulate a Karabo Bridge server and send random data from a detector,
     either AGIPD or LPD.
-    
+
     Parameters
     ----------
     port: str
@@ -182,9 +182,9 @@ if __name__ == '__main__':
     """Karabo Bridge server simulation example.
 
     Send simulated data for detectors present at XFEL.eu
-    
+
       python simulation.py [port] [ser] [det]
-      
+
     [port]
       the port on which the server is bound.
 
@@ -193,11 +193,10 @@ if __name__ == '__main__':
 
     [det]
         the detector to simulate [AGIPD, LPD]
-      
-    e.g.    
-      python simulation.py 4545 
+
+    e.g.
+      python simulation.py 4545
 
     """
     _, port, *options = sys.argv
     server_sim(port, options)
-    
