@@ -184,15 +184,15 @@ if __name__ == '__main__':
 
     Send simulated data for detectors present at XFEL.eu
 
-      python simulation.py [port] [ser] [det]
+      python simulation.py PORT [SER] [DET]
 
-    [port]
+    PORT
       the port on which the server is bound.
 
-    [ser]
+    SER
         the serialization function. [pickle, msgpack]
 
-    [det]
+    DET
         the detector to simulate [AGIPD, LPD]
 
     e.g.
