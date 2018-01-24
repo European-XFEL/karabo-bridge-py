@@ -1,13 +1,14 @@
 from collections import deque
 from functools import partial
+import pickle
+import sys
+from time import sleep, time
+from threading import Thread
+
 import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
 import numpy as np
-import pickle
-from time import sleep, time
-import sys
-from threading import Thread
 import zmq
 
 
