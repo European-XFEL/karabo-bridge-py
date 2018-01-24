@@ -199,5 +199,12 @@ if __name__ == '__main__':
       python simulation.py 4545
 
     """
+
+    if len(sys.argv) < 2:
+        print("Need to provide at least the port as an argument.\n")
+        print("For example: ")
+        print("$ python {} 4545".format(sys.argv[0]))
+        sys.exit(1)
+
     _, port, *options = sys.argv
     server_sim(port, options)
