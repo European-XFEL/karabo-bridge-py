@@ -31,14 +31,14 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 def gen_combined_detector_data(source):
     gen = {source: {}}
 
-    #metadata
+    # metadata
     sec, frac = str(time()).split('.')
     tid = int(sec+frac[:1])
     gen[source]['metadata'] = {
         'source': source,
         'timestamp': {'tid': tid,
-            'sec': int(sec), 'frac': int(frac)
-    }}
+                      'sec': int(sec), 'frac': int(frac)}
+    }
 
     # detector random data
     rand_data = partial(np.random.uniform, low=1500, high=1600,
@@ -46,7 +46,7 @@ def gen_combined_detector_data(source):
     data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
     for pulse in range(_PULSES):
         for module in range(_MODULES):
-            data[pulse, module,] = rand_data()
+            data[pulse, module, ] = rand_data()
     cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
     length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
@@ -104,7 +104,7 @@ def generate(source, queue):
                 data = gen_combined_detector_data(source)
                 queue.append(data)
                 print('Server : buffered train:',
-                        data[source]['metadata']['timestamp']['tid'])
+                      data[source]['metadata']['timestamp']['tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
