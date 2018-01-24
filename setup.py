@@ -15,5 +15,6 @@ setup(name="karabo_bridge",
       long_description=read("README.md"),
       url="https://github.com/European-XFEL/karabo-bridge-py",
       license="BSD",
-      install_requires=["msgpack-python", "msgpack_numpy", "numpy", "zmq"]
+      install_requires=["msgpack-python", "msgpack_numpy", "numpy", "zmq"],
+      packages=["karabo_bridge"]
       )
