@@ -58,7 +58,7 @@ class KaraboBridge:
 
     def next(self):
         """Request next data container.
-        
+
         This function call is blocking.
         """
         self.socket.send(b'next')
