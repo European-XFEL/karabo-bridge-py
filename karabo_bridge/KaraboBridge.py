@@ -38,14 +38,14 @@ class KaraboBridge:
         if re.match(r'^tcp://.*:\d{1,5}$', endpoint) is None:
             raise SyntaxError("Provided endpoint is invalid:", str(endpoint))
 
-        self.context = zmq.Context()
-        self.socket = None
+        self._context = zmq.Context()
+        self._socket = None
         self.deserializer = None
 
         if sock == 'REQ':
-            self.socket = self.context.socket(zmq.REQ)
-            self.socket.setsockopt(zmq.LINGER, 0)
-            self.socket.connect(endpoint)
+            self._socket = self._context.socket(zmq.REQ)
+            self._socket.setsockopt(zmq.LINGER, 0)
+            self._socket.connect(endpoint)
         else:
             raise NotImplementedError('socket is not supported:', str(sock))
 
@@ -61,8 +61,8 @@ class KaraboBridge:
 
         This function call is blocking.
         """
-        self.socket.send(b'next')
-        msg = self.socket.recv_multipart()
+        self._socket.send(b'next')
+        msg = self._socket.recv_multipart()
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
