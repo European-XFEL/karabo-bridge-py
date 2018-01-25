@@ -58,7 +58,7 @@ class KaraboBridge:
 
     def next(self):
         """Request next data container.
-        
+
         This function call is blocking.
         """
         self.socket.send(b'next')
@@ -86,8 +86,8 @@ class KaraboBridge:
                 buf = memoryview(data)
                 array = np.frombuffer(buf, dtype=dtype)
                 if strides is not None:
-                    array = numpy.lib.stride_tricks.as_strided(array, shape,
-                                                               strides)
+                    array = np.lib.stride_tricks.as_strided(array, shape,
+                                                            strides)
                 else:
                     array = array.reshape(shape)
 

@@ -1,13 +1,14 @@
 from collections import deque
 from functools import partial
+import pickle
+import sys
+from time import sleep, time
+from threading import Thread
+
 import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
 import numpy as np
-import pickle
-from time import sleep, time
-import sys
-from threading import Thread
 import zmq
 
 
@@ -30,14 +31,14 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 def gen_combined_detector_data(source):
     gen = {source: {}}
 
-    #metadata
+    # metadata
     sec, frac = str(time()).split('.')
     tid = int(sec+frac[:1])
     gen[source]['metadata'] = {
         'source': source,
         'timestamp': {'tid': tid,
-            'sec': int(sec), 'frac': int(frac)
-    }}
+                      'sec': int(sec), 'frac': int(frac)}
+    }
 
     # detector random data
     rand_data = partial(np.random.uniform, low=1500, high=1600,
@@ -45,7 +46,7 @@ def gen_combined_detector_data(source):
     data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
     for pulse in range(_PULSES):
         for module in range(_MODULES):
-            data[pulse, module,] = rand_data()
+            data[pulse, module, ] = rand_data()
     cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
     length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
@@ -103,7 +104,7 @@ def generate(source, queue):
                 data = gen_combined_detector_data(source)
                 queue.append(data)
                 print('Server : buffered train:',
-                        data[source]['metadata']['timestamp']['tid'])
+                      data[source]['metadata']['timestamp']['tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
@@ -183,20 +184,27 @@ if __name__ == '__main__':
 
     Send simulated data for detectors present at XFEL.eu
 
-      python simulation.py [port] [ser] [det]
+      python simulation.py PORT [SER] [DET]
 
-    [port]
+    PORT
       the port on which the server is bound.
 
-    [ser]
+    SER
         the serialization function. [pickle, msgpack]
 
-    [det]
+    DET
         the detector to simulate [AGIPD, LPD]
 
     e.g.
       python simulation.py 4545
 
     """
+
+    if len(sys.argv) < 2:
+        print("Need to provide at least the port as an argument.\n")
+        print("For example: ")
+        print("$ python {} 4545".format(sys.argv[0]))
+        sys.exit(1)
+
     _, port, *options = sys.argv
     server_sim(port, options)
