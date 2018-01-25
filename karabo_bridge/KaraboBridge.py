@@ -38,21 +38,21 @@ class KaraboBridge:
         if re.match(r'^tcp://.*:\d{1,5}$', endpoint) is None:
             raise SyntaxError("Provided endpoint is invalid:", str(endpoint))
 
-        self.context = zmq.Context()
-        self.socket = None
-        self.deserializer = None
+        self._context = zmq.Context()
+        self._socket = None
+        self._deserializer = None
 
         if sock == 'REQ':
-            self.socket = self.context.socket(zmq.REQ)
-            self.socket.setsockopt(zmq.LINGER, 0)
-            self.socket.connect(endpoint)
+            self._socket = self._context.socket(zmq.REQ)
+            self._socket.setsockopt(zmq.LINGER, 0)
+            self._socket.connect(endpoint)
         else:
             raise NotImplementedError('socket is not supported:', str(sock))
 
         if ser == 'msgpack':
-            self.deserializer = partial(msgpack.loads, encoding='utf-8')
+            self._deserializer = partial(msgpack.loads, encoding='utf-8')
         elif ser == 'pickle':
-            self.deserializer = pickle.loads
+            self._deserializer = pickle.loads
         else:
             raise NotImplementedError('serializer is not supported:', str(ser))
 
@@ -61,23 +61,23 @@ class KaraboBridge:
 
         This function call is blocking.
         """
-        self.socket.send(b'next')
-        msg = self.socket.recv_multipart()
+        self._socket.send(b'next')
+        msg = self._socket.recv_multipart()
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
         if len(msg) < 2:
-            return self.deserializer(msg[-1])
+            return self._deserializer(msg[-1])
 
         dat = {}
         for header, data in zip(*[iter(msg)]*2):
-            md = self.deserializer(header)
+            md = self._deserializer(header)
             source = md['source']
             content = md['content']
 
             if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
                            'pickle.DEFAULT_PROTOCOL'):
-                dat[source] = self.deserializer(data)
+                dat[source] = self._deserializer(data)
             elif content in ('array', 'ImageData'):
                 shape = md['__array_interface__']['shape']
                 dtype = md['__array_interface__']['typestr']
