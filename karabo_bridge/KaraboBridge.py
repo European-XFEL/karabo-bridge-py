@@ -79,17 +79,19 @@ class KaraboBridge:
                            'pickle.DEFAULT_PROTOCOL'):
                 dat[source] = self._deserializer(data)
             elif content in ('array', 'ImageData'):
-                shape = md['__array_interface__']['shape']
-                dtype = md['__array_interface__']['typestr']
-                strides = md['__array_interface__']['strides']
+                dtype = md['dtype']
+                shape = md['shape']
+                # shape = md['__array_interface__']['shape']
+                # dtype = md['__array_interface__']['typestr']
+                # strides = md['__array_interface__']['strides']
 
                 buf = memoryview(data)
-                array = np.frombuffer(buf, dtype=dtype)
-                if strides is not None:
-                    array = np.lib.stride_tricks.as_strided(array, shape,
-                                                            strides)
-                else:
-                    array = array.reshape(shape)
+                array = np.frombuffer(buf, dtype=dtype).reshape(shape)
+                # if strides is not None:
+                #     array = np.lib.stride_tricks.as_strided(array, shape,
+                #                                             strides)
+                # else:
+                #     array = array.reshape(shape)
 
                 if content == 'array':
                     dat[source].update({md['path']: array})
