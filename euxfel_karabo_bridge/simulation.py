@@ -2,10 +2,6 @@
 detector data.
 """
 
-
-__all__ = ['server_sim']
-
-
 from collections import deque
 from functools import partial
 import pickle
@@ -15,9 +11,14 @@ from threading import Thread
 
 import msgpack
 import msgpack_numpy
-msgpack_numpy.patch()
 import numpy as np
 import zmq
+
+
+__all__ = ['server_sim']
+
+
+msgpack_numpy.patch()
 
 
 # AGIPD

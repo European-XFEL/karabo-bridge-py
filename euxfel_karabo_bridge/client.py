@@ -1,15 +1,14 @@
 """Karabo bridge client."""
 
-
-__all__ = ['Client']
-
-
 from functools import partial
 import msgpack
 import numpy as np
 import pickle
 import re
 import zmq
+
+
+__all__ = ['Client']
 
 
 class Client:
@@ -100,4 +99,3 @@ class Client:
             else:
                 raise RuntimeError('unknown message content:', md['content'])
         return dat
-
