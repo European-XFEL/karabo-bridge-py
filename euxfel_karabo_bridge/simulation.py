@@ -1,3 +1,11 @@
+"""Set of functions to simulate karabo bridge server and generate fake
+detector data.
+"""
+
+
+__all__ = ('server_sim')
+
+
 from collections import deque
 from functools import partial
 import pickle

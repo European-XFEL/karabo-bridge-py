@@ -1,3 +1,10 @@
+"""Karabo bridge client.
+"""
+
+
+__all__ = ('KaraboBridge')
+
+
 from functools import partial
 import msgpack
 import numpy as np
@@ -12,7 +19,8 @@ class KaraboBridge:
     This class can request data to a Karabo bridge server.
     Create the client with::
 
-        krb_client = KaraboBridge("tcp://153.0.55.21:12345")
+        from euxfel_karabo_bridge import Client
+        krb_client = Client("tcp://153.0.55.21:12345")
 
     then call ``data = krb_client.next()`` to request next available data
     container.
@@ -93,3 +101,4 @@ class KaraboBridge:
             else:
                 raise RuntimeError('unknown message content:', md['content'])
         return dat
+
