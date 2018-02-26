@@ -10,7 +10,7 @@ def read(fname):
 setup(name="euxfel_karabo_bridge",
       author="The European XFEL",
       author_email="usp-support@xfel.eu",
-      description=("Python 3 tools to request data from the Karabo control
+      description=("Python 3 tools to request data from the Karabo control"
                    "system."),
       long_description=read("README.md"),
       url="https://github.com/European-XFEL/karabo-bridge-py",

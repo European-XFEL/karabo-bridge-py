@@ -1,8 +1,7 @@
-"""Karabo bridge client.
-"""
+"""Karabo bridge client."""
 
 
-__all__ = ('KaraboBridge')
+__all__ = ['Client']
 
 
 from functools import partial
@@ -13,7 +12,7 @@ import re
 import zmq
 
 
-class KaraboBridge:
+class Client:
     """Karabo bridge client for Karabo pipeline data.
 
     This class can request data to a Karabo bridge server.

@@ -1,3 +1,5 @@
+"""The euxfel_karabo_bridge package."""
+
 from .client import *
 from .simulation import *
 

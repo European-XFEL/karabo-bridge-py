@@ -3,7 +3,7 @@ detector data.
 """
 
 
-__all__ = ('server_sim')
+__all__ = ['server_sim']
 
 
 from collections import deque
