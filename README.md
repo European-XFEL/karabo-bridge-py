@@ -8,4 +8,9 @@ This package is dependent on msgpack-python, numpy, zmq.
 
 to install package:
 
-    pip3 install .
+    python3 -m pip install git+https://github.com/European-XFEL/karabo-bridge-py.git#egg=karabo-bridge-py
+
+    or
+
+    git clone https://github.com/European-XFEL/karabo-bridge-py.git
+    python3 -m pip install .
