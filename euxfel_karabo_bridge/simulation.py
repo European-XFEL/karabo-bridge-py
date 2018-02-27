@@ -1,5 +1,13 @@
-"""Set of functions to simulate karabo bridge server and generate fake
+# coding: utf-8
+"""
+Set of functions to simulate karabo bridge server and generate fake
 detector data.
+
+Copyright (c) 2017, European X-Ray Free-Electron Laser Facility GmbH
+All rights reserved.
+
+You should have received a copy of the 3-Clause BSD License along with this
+program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from collections import deque

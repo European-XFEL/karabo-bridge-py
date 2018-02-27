@@ -1,4 +1,13 @@
-"""Karabo bridge client."""
+# coding: utf-8
+"""
+Karabo bridge client.
+
+Copyright (c) 2017, European X-Ray Free-Electron Laser Facility GmbH
+All rights reserved.
+
+You should have received a copy of the 3-Clause BSD License along with this
+program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
+"""
 
 from functools import partial
 import msgpack
