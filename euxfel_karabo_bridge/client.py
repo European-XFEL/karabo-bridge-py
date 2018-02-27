@@ -1,3 +1,14 @@
+# coding: utf-8
+"""
+Karabo bridge client.
+
+Copyright (c) 2017, European X-Ray Free-Electron Laser Facility GmbH
+All rights reserved.
+
+You should have received a copy of the 3-Clause BSD License along with this
+program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
+"""
+
 from functools import partial
 import msgpack
 import numpy as np
@@ -6,13 +17,17 @@ import re
 import zmq
 
 
-class KaraboBridge:
+__all__ = ['Client']
+
+
+class Client:
     """Karabo bridge client for Karabo pipeline data.
 
     This class can request data to a Karabo bridge server.
     Create the client with::
 
-        krb_client = KaraboBridge("tcp://153.0.55.21:12345")
+        from euxfel_karabo_bridge import Client
+        krb_client = Client("tcp://153.0.55.21:12345")
 
     then call ``data = krb_client.next()`` to request next available data
     container.

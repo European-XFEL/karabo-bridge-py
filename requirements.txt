@@ -1,0 +1,4 @@
+msgpack-python==0.4.6
+msgpack-numpy
+numpy
+pyzmq>=17.0.0

@@ -1,3 +1,15 @@
+# coding: utf-8
+"""
+Set of functions to simulate karabo bridge server and generate fake
+detector data.
+
+Copyright (c) 2017, European X-Ray Free-Electron Laser Facility GmbH
+All rights reserved.
+
+You should have received a copy of the 3-Clause BSD License along with this
+program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
+"""
+
 from collections import deque
 from functools import partial
 import pickle
@@ -7,9 +19,14 @@ from threading import Thread
 
 import msgpack
 import msgpack_numpy
-msgpack_numpy.patch()
 import numpy as np
 import zmq
+
+
+__all__ = ['server_sim']
+
+
+msgpack_numpy.patch()
 
 
 # AGIPD
