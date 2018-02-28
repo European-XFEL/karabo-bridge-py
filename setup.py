@@ -33,6 +33,7 @@ setup(name="euxfel_karabo_bridge",
       license="BSD-3-Clause",
       install_requires=[r for r in read('requirements.txt').splitlines()],
       packages=["euxfel_karabo_bridge"],
+      scripts=["bin/glimpse"],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: Console',
