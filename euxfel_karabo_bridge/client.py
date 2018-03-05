@@ -65,7 +65,7 @@ class Client:
             raise NotImplementedError('socket is not supported:', str(sock))
 
         if ser == 'msgpack':
-            self._deserializer = partial(msgpack.loads, encoding='utf-8')
+            self._deserializer = partial(msgpack.loads, raw=False)
         elif ser == 'pickle':
             self._deserializer = pickle.loads
         else:
