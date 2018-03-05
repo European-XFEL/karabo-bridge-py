@@ -29,11 +29,17 @@ setup(name="euxfel_karabo_bridge",
       url="https://github.com/European-XFEL/karabo-bridge-py",
       description=("Python 3 tools to request data from the Karabo control"
                    "system."),
-      long_description=read("README.md"),
+      long_description=read("README.rst"),
       license="BSD-3-Clause",
       install_requires=[r for r in read('requirements.txt').splitlines()],
       packages=["euxfel_karabo_bridge"],
-      scripts=["bin/glimpse"],
+    #   scripts=["bin/glimpse"],
+      entry_points={
+          'console_scripts': [
+              'krbb_glimpse=euxfel_karabo_bridge.cli.glimpse:main',
+#              'krbb_server_sim=euxfel_karabo_bridge.simulation:server_sim'
+              ],
+      },
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: Console',
