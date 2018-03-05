@@ -33,12 +33,13 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 from .client import *
 from .simulation import *
+from .cli import *
 
 
 __all__ = (client.__all__ +
-           simulation.__all__)
+           simulation.__all__ )
