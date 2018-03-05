@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os.path as osp
 import re
-from setuptools import setup
+from setuptools import setup, find_packages
 import sys
 
 
@@ -32,7 +32,7 @@ setup(name="euxfel_karabo_bridge",
       long_description=read("README.rst"),
       license="BSD-3-Clause",
       install_requires=[r for r in read('requirements.txt').splitlines()],
-      packages=["euxfel_karabo_bridge"],
+      packages=find_packages(),
       entry_points={
           'console_scripts': [
               'krbb_glimpse=euxfel_karabo_bridge.cli.glimpse:main',
