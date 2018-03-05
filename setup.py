@@ -31,8 +31,14 @@ setup(name="euxfel_karabo_bridge",
                    "system."),
       long_description=read("README.md"),
       license="BSD-3-Clause",
-      packages=find_packages(),
       install_requires=[r for r in read('requirements.txt').splitlines()],
+      packages=find_packages(),
+      entry_points={
+          'console_scripts': [
+              'krbb_glimpse=euxfel_karabo_bridge.cli.glimpse:main',
+#              'krbb_server_sim=euxfel_karabo_bridge.simulation:server_sim'
+              ],
+      },
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: Console',
