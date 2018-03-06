@@ -45,15 +45,14 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 # _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
-def gen_combined_detector_data(source):
+def gen_combined_detector_data(source, tid_counter):
     gen = {source: {}}
 
     # metadata
     sec, frac = str(time()).split('.')
-    tid = int(sec+frac[:1])
     gen[source]['metadata'] = {
         'source': source,
-        'timestamp': {'tid': tid,
+        'timestamp': {'tid': tid_counter,
                       'sec': int(sec), 'frac': int(frac)}
     }
 
@@ -67,7 +66,7 @@ def gen_combined_detector_data(source):
     cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
     length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
-    trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid)
+    trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid_counter)
     status = np.zeros(_PULSES, dtype=np.uint16)
 
     gen[source]['image.data'] = data
@@ -80,7 +79,7 @@ def gen_combined_detector_data(source):
     checksum = np.ones(16, dtype=np.int8)
     magicNumberEnd = np.ones(8, dtype=np.int8)
     status = 0
-    trainId = tid
+    trainId = tid_counter
 
     gen[source]['trailer.checksum'] = checksum
     gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
@@ -88,7 +87,7 @@ def gen_combined_detector_data(source):
     gen[source]['trailer.trainId'] = trainId
 
     data = np.ones(416, dtype=np.uint8)
-    trainId = tid
+    trainId = tid_counter
 
     gen[source]['detector.data'] = data
     gen[source]['detector.trainId'] = trainId
@@ -100,7 +99,7 @@ def gen_combined_detector_data(source):
     minorTrainFormatVersion = 1
     pulseCount = _PULSES
     reserved = np.ones(16, dtype=np.uint8)
-    trainId = tid
+    trainId = tid_counter
 
     gen[source]['header.dataId'] = dataId
     gen[source]['header.linkId'] = linkId
@@ -109,16 +108,18 @@ def gen_combined_detector_data(source):
     gen[source]['header.minorTrainFormatVersion'] = minorTrainFormatVersion
     gen[source]['header.pulseCount'] = pulseCount
     gen[source]['header.reserved'] = reserved
-    gen[source]['header.trainId'] = tid
+    gen[source]['header.trainId'] = tid_counter
 
     return gen
 
 
 def generate(source, queue):
+    tid_counter = 10000000000
     try:
         while True:
             if len(queue) < queue.maxlen:
-                data = gen_combined_detector_data(source)
+                data = gen_combined_detector_data(source, tid_counter)
+                tid_counter += 1
                 queue.append(data)
                 print('Server : buffered train:',
                       data[source]['metadata']['timestamp']['tid'])
