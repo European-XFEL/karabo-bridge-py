@@ -1,4 +1,7 @@
-from karabo_bridge import KaraboBridge
+import msgpack_numpy
+msgpack_numpy.patch()
+
+from client import Client as KaraboBridge
 
 krb_client = KaraboBridge("tcp://localhost:4545")
 
