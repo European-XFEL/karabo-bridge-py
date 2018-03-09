@@ -1,9 +1,6 @@
-import msgpack_numpy
-msgpack_numpy.patch()
+from euxfel_karabo_bridge import Client
 
-from client import Client as KaraboBridge
-
-krb_client = KaraboBridge("tcp://localhost:4545")
+krb_client = Client("tcp://localhost:4545")
 
 for i in range(10):
     data = krb_client.next()
