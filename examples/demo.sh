@@ -1,7 +1,7 @@
 # Start simulated experiment, which offers data as the KaraboBridge
 # would be during the experiment:
 echo "demo.sh: starting (simulated) server"
-python -c "from karabo_bridge import server_sim; server_sim(4545)" &
+python -c "from euxfel_karabo_bridge import server_sim; server_sim(4545)" &
 SIMULATION_PID=$!
 
 # Start client to read 10 trains

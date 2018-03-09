@@ -1,6 +1,6 @@
-from karabo_bridge import KaraboBridge
+from euxfel_karabo_bridge import Client
 
-krb_client = KaraboBridge("tcp://localhost:4545")
+krb_client = Client("tcp://localhost:4545")
 
 for i in range(10):
     data = krb_client.next()
