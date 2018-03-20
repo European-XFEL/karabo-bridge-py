@@ -35,8 +35,9 @@ setup(name="euxfel_karabo_bridge",
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'krbb_glimpse=euxfel_karabo_bridge.cli.glimpse:main',
-#              'krbb_server_sim=euxfel_karabo_bridge.simulation:server_sim'
+              'krbb_glimpse=euxfel_karabo_bridge.cli.commandline:glimpse',
+              'krbb_monitor=euxfel_karabo_bridge.cli.commandline:monitor',
+              'krbb_server_sim=euxfel_karabo_bridge.cli.commandline:simulation',
               ],
       },
       classifiers=[

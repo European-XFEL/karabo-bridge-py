@@ -195,34 +195,3 @@ def server_sim(port, *options):
     detector = next((o for o in options if o in ('AGIPD', 'LPD')), 'AGIPD')
 
     start_gen(port, ser, detector)
-
-
-if __name__ == '__main__':
-    """Karabo Bridge server simulation example.
-
-    Send simulated data for detectors present at XFEL.eu
-
-      python simulation.py PORT [SER] [DET]
-
-    PORT
-      the port on which the server is bound.
-
-    SER
-        the serialization function. [pickle, msgpack]
-
-    DET
-        the detector to simulate [AGIPD, LPD]
-
-    e.g.
-      python simulation.py 4545
-
-    """
-
-    if len(sys.argv) < 2:
-        print("Need to provide at least the port as an argument.\n")
-        print("For example: ")
-        print("$ python {} 4545".format(sys.argv[0]))
-        sys.exit(1)
-
-    _, port, *options = sys.argv
-    server_sim(port, options)
