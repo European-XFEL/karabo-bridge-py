@@ -65,31 +65,3 @@ def walk_hdf5_to_dict(h5):
         else:
             print('what are you?', type(value))
     return dic
-
-
-@entrypoint
-def main():
-    """Karabo bridge glimpse.
-
-    Get a single train data from a karabo bridge server and dump it to a file.
-    
-      krbb_glimpse [host] [port]
-      
-    e.g.    
-      krbb_glimpse 10.254.0.64 4500
-    """
-    assert len(sys.argv) > 2
-    _, host, port, *options = sys.argv
-    assert port.isdigit()
-
-    endpoint = 'tcp://{}:{}'.format(host, port)
-    print('get train data from', endpoint)
-
-    client = Client(endpoint)
-    data = client.next()
-
-    dict_to_hdf5(data, endpoint)
-
-
-if __name__ == '__main__':
-    main()
