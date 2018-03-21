@@ -61,8 +61,15 @@ class Client:
             self._socket = self._context.socket(zmq.REQ)
             self._socket.setsockopt(zmq.LINGER, 0)
             self._socket.connect(endpoint)
+        elif sock == 'SUB':
+            self._socket = self._context.socket(zmq.SUB)
+            self._socket.set_hwm(1)
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
+            self._socket.connect(endpoint)
         else:
             raise NotImplementedError('socket is not supported:', str(sock))
+
+        self._pattern = self._socket.TYPE
 
         if ser == 'msgpack':
             self._deserializer = partial(msgpack.loads, raw=False)
@@ -76,7 +83,8 @@ class Client:
 
         This function call is blocking.
         """
-        self._socket.send(b'next')
+        if self._pattern == zmq.REQ:
+            self._socket.send(b'next')
         msg = self._socket.recv_multipart()
         return self._deserialize(msg)
 
