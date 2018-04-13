@@ -2,10 +2,10 @@
 European XFEL Karabo Bridge
 ===========================
 
-What's this
------------
-
-`Euxfel_karabo_bridge`_ is a python3 package which primary goal is to provide a client to receive pipeline data from the Karabo control system. A Karabo bridge server simulation is available in the package.
+``euxfel_karabo_bridge`` is a Python 3 client to receive pipeline data from the
+Karabo control system used at `European XFEL <https://www.xfel.eu/>`_.
+A simulated Karabo bridge server is included to allow testing code without
+a connection to a real Karabo server.
 
 Installing
 ----------
@@ -25,7 +25,12 @@ How to use
 Request data from a karabo bridge server
 ++++++++++++++++++++++++++++++++++++++++
 
-Use the ``Client`` class from euxfel_karabo_brige to create a client and the ``next`` function to request request data from the server. The returned value is a dictionary containing all data source available in the pipeline. Each source contains a dictionary containyn the (flattened) keys/values pair for sources parameters. Value are all built-in python types, big detector data are numpy array.
+Use the ``Client`` class from euxfel_karabo_brige to create a client and the
+``next`` method to request data from the server.
+The returned value is a dictionary containing all data source available in the
+pipeline. Each source contains a dictionary containing the (flattened)
+key/value pairs for that source's parameters. The values are all built-in python
+types, or numpy arrays.
 
 .. code-block:: python
 
@@ -40,7 +45,9 @@ Use the ``Client`` class from euxfel_karabo_brige to create a client and the ``n
 Use the Simulation server
 +++++++++++++++++++++++++
 
-To start a simulation simply call the ``server_sim`` function and provide a port to bind to. You can the use the ``Client`` class and connect to it in order to integrate the client without the need to use Karabo.
+To start a simulation, call the ``server_sim`` function and provide a port to bind to.
+You can the use the ``Client`` class and connect to it to test the
+client without the need to use Karabo.
 
 .. code-block:: python
 
