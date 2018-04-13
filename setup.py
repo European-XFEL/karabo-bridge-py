@@ -31,7 +31,12 @@ setup(name="euxfel_karabo_bridge",
                    "system."),
       long_description=read("README.rst"),
       license="BSD-3-Clause",
-      install_requires=[r for r in read('requirements.txt').splitlines()],
+      install_requires=[
+          'msgpack>=0.5.4',
+          'msgpack-numpy',
+          'numpy',
+          'pyzmq>=17.0.0',
+      ],
       packages=find_packages(),
       entry_points={
           'console_scripts': [
@@ -51,4 +56,4 @@ setup(name="euxfel_karabo_bridge",
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
       ]
-      )
+)
