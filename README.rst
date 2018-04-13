@@ -61,3 +61,7 @@ client without the need to use Karabo.
     Server : buffered train: 15202746827
     ...
 
+
+You can also run the simulated server from the command line::
+
+    $ krbb_server_sim 1234
