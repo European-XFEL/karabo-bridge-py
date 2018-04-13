@@ -13,7 +13,6 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 from collections import deque
 from functools import partial
 import pickle
-import sys
 from time import sleep, time
 from threading import Thread
 
@@ -152,6 +151,8 @@ def start_gen(port, ser, det):
         serialize = partial(msgpack.dumps, use_bin_type=True)
     elif ser == 'pickle':
         serialize = pickle.dumps
+    else:
+        raise ValueError("Unknown serialisation format %s" % ser)
 
     queue = deque(maxlen=10)
 
