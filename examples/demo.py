@@ -1,4 +1,4 @@
-from euxfel_karabo_bridge import Client
+from karabo_bridge import Client
 
 krb_client = Client("tcp://localhost:4545")
 

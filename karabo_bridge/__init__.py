@@ -1,5 +1,5 @@
 # coding: utf-8
-"""The euxfel_karabo_bridge package.
+"""The karabo_bridge package.
 
 Copyright (c) 2017, European X-Ray Free-Electron Laser Facility GmbH
 All rights reserved.

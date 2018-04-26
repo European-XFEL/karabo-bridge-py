@@ -26,7 +26,7 @@ class Client:
     This class can request data to a Karabo bridge server.
     Create the client with::
 
-        from euxfel_karabo_bridge import Client
+        from karabo_bridge import Client
         krb_client = Client("tcp://153.0.55.21:12345")
 
     then call ``data = krb_client.next()`` to request next available data

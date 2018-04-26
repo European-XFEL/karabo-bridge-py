@@ -21,8 +21,8 @@ def find_version(*parts):
     raise RuntimeError("Unable to find version string.")
 
 
-setup(name="euxfel_karabo_bridge",
-      version=find_version("euxfel_karabo_bridge", "__init__.py"),
+setup(name="karabo_bridge",
+      version=find_version("karabo_bridge", "__init__.py"),
       author="European XFEL GmbH",
       author_email="cas-support@xfel.eu",
       maintainer="Thomas Michelat",
@@ -40,9 +40,9 @@ setup(name="euxfel_karabo_bridge",
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'krbb_glimpse=euxfel_karabo_bridge.cli.commandline:glimpse',
-              'krbb_monitor=euxfel_karabo_bridge.cli.commandline:monitor',
-              'krbb_server_sim=euxfel_karabo_bridge.cli.commandline:simulation',
+              'krbb_glimpse=karabo_bridge.cli.commandline:glimpse',
+              'krbb_monitor=karabo_bridge.cli.commandline:monitor',
+              'krbb_server_sim=karabo_bridge.cli.commandline:simulation',
               ],
       },
       classifiers=[
