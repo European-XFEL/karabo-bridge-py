@@ -40,9 +40,9 @@ setup(name="karabo_bridge",
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'krbb_glimpse=karabo_bridge.cli.commandline:glimpse',
-              'krbb_monitor=karabo_bridge.cli.commandline:monitor',
-              'krbb_server_sim=karabo_bridge.cli.commandline:simulation',
+              'krbb-glimpse=karabo_bridge.cli.commandline:glimpse',
+              'krbb-monitor=karabo_bridge.cli.commandline:monitor',
+              'krbb-server-sim=karabo_bridge.cli.commandline:simulation',
               ],
       },
       classifiers=[
