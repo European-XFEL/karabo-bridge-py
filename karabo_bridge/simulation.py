@@ -124,7 +124,7 @@ def generate(source, queue):
                 tid_counter += 1
                 queue.append(data)
                 print('Server : buffered train:',
-                      data[source]['metadata']['timestamp']['tid'])
+                      data[source]['metadata']['timestamp.tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
