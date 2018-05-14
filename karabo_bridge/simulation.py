@@ -142,7 +142,43 @@ def set_detector_params(det):
         return 'SPB_DET_AGIPD1M-1/DET/detector'
 
 
-def start_gen(port, ser, det):
+def containize(data, ser, ser_func, vers):
+    if vers not in ('1.0', 'latest'):
+        raise ValueError("Invalid version %s" % vers)
+
+    if vers == '1.0':
+        return ser_func(data)
+
+    newdata = {}
+    for src, props in data.items():
+        arr = {}
+        for key, value in props.items():
+            if isinstance(value, np.ndarray):
+                arr[key] = props.pop(key)
+        newdata[src] = (data, arr, None)  # the last item is ImageData objects.
+
+    msg = []
+    for src, (dic, arr, img) in newdata.items():
+        header = {'source': src, 'content': str(ser)}
+        msg.append(ser_func(header))
+        msg.append(ser_func(dic))
+
+        for path, array in arr.items():
+            header = {'source': src, 'content': 'array', 'path': path,
+                      'dtype': str(array.dtype), 'shape': array.shape}
+            msg.append(ser_func(header))
+            if not array.flags['C_CONTIGUOUS']:
+                array = np.ascontiguousarray(array)
+            msg.append(memoryview(array))
+
+        for path, image in img.items():
+            # TODO
+            continue
+
+    return msg
+
+
+def start_gen(port, ser, vers, det):
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.setsockopt(zmq.LINGER, 0)
@@ -169,7 +205,10 @@ def start_gen(port, ser, det):
             if msg == b'next':
                 while len(queue) <= 0:
                     sleep(0.1)
-                socket.send(serialize(queue.popleft()))
+
+                data = queue.popleft()
+                msg = containize(data, ser, serialize, vers)
+                socket.send(msg)
             else:
                 print('wrong request')
                 break
@@ -192,10 +231,13 @@ def server_sim(port, *options):
         The port to on which the server is bound.
     ser: str, optional
         The serialization algorithm, default is msgpack.
+    version: str, optional
+        The container version of the serialized data.
     detector: str, optional
         The data format to send, default is AGIPD detector.
     """
     ser = next((o for o in options if o in ('msgpack', 'pickle')), 'msgpack')
+    version = next((o for o in options if o in ('1.0', 'latest')), 'latest')
     detector = next((o for o in options if o in ('AGIPD', 'LPD')), 'AGIPD')
 
-    start_gen(port, ser, detector)
+    start_gen(port, ser, version, detector)
