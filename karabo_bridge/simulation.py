@@ -55,7 +55,7 @@ def gen_combined_detector_data(source, tid_counter):
         'timestamp': ts,
         'timestamp.tid': tid_counter,
         'timestamp.sec': sec,
-        'timestamp.frac': frac}
+        'timestamp.frac': frac
     }
 
     # detector random data
