@@ -53,7 +53,7 @@ def monitor():
 
     try:
         while True:
-            _monitor(client)            
+            _monitor(client)
     except KeyboardInterrupt:
         print('\nexit.')
 
