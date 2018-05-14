@@ -159,7 +159,7 @@ def containize(data, ser, ser_func, vers):
                 arr_keys.append(key)
         for arr_key in arr_keys:
             data[src].pop(arr_key)
-        newdata[src] = (data, arr, {})  # the last item is ImageData objects.
+        newdata[src] = (data[src], arr, {})  # the last item is ImageData objects.
 
     msg = []
     for src, (dic, arr, img) in newdata.items():
