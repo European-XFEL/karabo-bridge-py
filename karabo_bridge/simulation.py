@@ -179,8 +179,6 @@ def containize(data, ser, ser_func, vers):
             # TODO
             continue
 
-    print(msg[:2])
-
     return msg
 
 
