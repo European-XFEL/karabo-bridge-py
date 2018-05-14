@@ -48,11 +48,14 @@ def gen_combined_detector_data(source, tid_counter):
     gen = {source: {}}
 
     # metadata
-    sec, frac = str(time()).split('.')
+    ts = time()
+    sec, frac = str(ts).split('.')
     gen[source]['metadata'] = {
         'source': source,
-        'timestamp': {'tid': tid_counter,
-                      'sec': int(sec), 'frac': int(frac)}
+        'timestamp': ts,
+        'timestamp.tid': tid_counter,
+        'timestamp.sec': sec,
+        'timestamp.frac': frac}
     }
 
     # detector random data
