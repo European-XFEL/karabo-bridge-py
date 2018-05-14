@@ -147,15 +147,18 @@ def containize(data, ser, ser_func, vers):
         raise ValueError("Invalid version %s" % vers)
 
     if vers == '1.0':
-        return ser_func(data)
+        return [ser_func(data)]
 
     newdata = {}
     for src, props in data.items():
         arr = {}
+        arr_key = []
         for key, value in props.items():
             if isinstance(value, np.ndarray):
-                arr[key] = props.pop(key)
-        newdata[src] = (data, arr, None)  # the last item is ImageData objects.
+                arr[key] = props[key]
+        for key in arr_key:
+            props.pop(key)
+        newdata[src] = (data, arr, {})  # the last item is ImageData objects.
 
     msg = []
     for src, (dic, arr, img) in newdata.items():
@@ -208,7 +211,7 @@ def start_gen(port, ser, vers, det):
 
                 data = queue.popleft()
                 msg = containize(data, ser, serialize, vers)
-                socket.send(msg)
+                socket.send_multipart(msg)
             else:
                 print('wrong request')
                 break
