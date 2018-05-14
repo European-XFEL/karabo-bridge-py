@@ -149,24 +149,17 @@ def containize(data, ser, ser_func, vers):
     if vers == '1.0':
         return [ser_func(data)]
 
-    for s in data:
-        print(data[s].keys())
-
-
     newdata = {}
     for src, props in data.items():
         arr = {}
-        arr_key = []
+        arr_keys = []
         for key, value in props.items():
             if isinstance(value, np.ndarray):
                 arr[key] = props[key]
-                arr_key.append(key)
-        for key in arr_key:
-            data[src].pop(key)
+                arr_keys.append(key)
+        for arr_key in arr_keys:
+            data[src].pop(arr_key)
         newdata[src] = (data, arr, {})  # the last item is ImageData objects.
-
-    for s in data:
-        print(data[s].keys())
 
     msg = []
     for src, (dic, arr, img) in newdata.items():
@@ -185,6 +178,8 @@ def containize(data, ser, ser_func, vers):
         for path, image in img.items():
             # TODO
             continue
+
+    print(msg[:2])
 
     return msg
 
