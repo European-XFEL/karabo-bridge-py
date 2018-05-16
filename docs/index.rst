@@ -6,6 +6,7 @@ Karabo Bridge
    :caption: Contents:
 
    protocol
+   py-client
 
 
 Indices and tables
