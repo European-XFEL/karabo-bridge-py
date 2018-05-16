@@ -2,7 +2,7 @@
 European XFEL Karabo Bridge
 ===========================
 
-``euxfel_karabo_bridge`` is a Python 3 client to receive pipeline data from the
+``karabo_bridge`` is a Python 3 client to receive pipeline data from the
 Karabo control system used at `European XFEL <https://www.xfel.eu/>`_.
 A simulated Karabo bridge server is included to allow testing code without
 a connection to a real Karabo server.
@@ -25,7 +25,7 @@ How to use
 Request data from a karabo bridge server
 ++++++++++++++++++++++++++++++++++++++++
 
-Use the ``Client`` class from euxfel_karabo_brige to create a client and the
+Use the ``Client`` class from karabo_brige to create a client and the
 ``next`` method to request data from the server.
 The returned value is a dictionary containing all data source available in the
 pipeline. Each source contains a dictionary containing the (flattened)
@@ -34,7 +34,7 @@ types, or numpy arrays.
 
 .. code-block:: python
 
-    >>> from euxfel_karabo_bridge import Client
+    >>> from karabo_bridge import Client
     >>> krb_client = Client('tcp://server-host-name:12345')
     >>> data = krb_client.next()
     >>> data.keys()
@@ -51,7 +51,7 @@ client without the need to use Karabo.
 
 .. code-block:: python
 
-    >>> from euxfel_karabo_bridge import server_sim
+    >>> from karabo_bridge import server_sim
     >>> server_sim(1234)
     Server : buffered train: 15202746822
     Server : buffered train: 15202746823
@@ -64,4 +64,4 @@ client without the need to use Karabo.
 
 You can also run the simulated server from the command line::
 
-    $ krbb_server_sim 1234
+    $ karabo-bridge-server-sim 1234
