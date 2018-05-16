@@ -61,8 +61,10 @@ The data is split up into a series of pieces,
 allowing arrays to be serialised more efficiently.
 Each piece has two ZeroMQ message parts: a msgpack-serialised header,
 followed by a data part.
+A full message is therefore a multipart ZeroMQ message with an even number
+of message parts.
 
-Each header part is a dictionary (msgpack map) containing at least the keys
+Each header part is a dictionary (a msgpack map) containing at least the keys
 ``source`` and ``content``. The former is a source name such as
 ``'SPB_DET_AGIPD1M-1/DET/detector'``. The latter is one of:
 
@@ -80,3 +82,19 @@ Each header part is a dictionary (msgpack map) containing at least the keys
   the same keys as for *array*, plus:
 
   * ``params``: Image parameters from Karabo (?)
+
+Protocol implementations
+------------------------
+
+Clients:
+
+* `Python client <https://github.com/European-XFEL/karabo-bridge-py>`_
+* `C++ client <https://github.com/European-XFEL/karabo-bridge-cpp>`_
+
+Servers:
+
+* `PipeToZeroMQ Karabo device <https://in.xfel.eu/gitlab/karaboDevices/PipeToZeroMQ>`_:
+  sends data from a live Karabo system.
+* `karabo_data Python module <https://karabo-data.readthedocs.io/en/latest/streaming.html>`__:
+  can stream data from XFEL HDF5 files.
+* The `Python client`_ includes a server to send simulated random data.
