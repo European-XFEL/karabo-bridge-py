@@ -25,6 +25,10 @@ Each source data dictionary also has a key ``metadata``,
 which contains a further nested dictionary with keys:
 ``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec`` and ``timestamp.frac``.
 
+Each source dictionary also has a key ``ignored_keys``, with a list of
+strings identifying keys which were filtered out of the data by configuration
+options on the bridge server.
+
 .. code-block:: python
 
     {
@@ -37,7 +41,8 @@ which contains a further nested dictionary with keys:
                 'timestamp.frac': '4109755',
                 'timestamp.sec': '1526464869',
                 'timestamp.tid': 10000000001
-            }
+            },
+            'ignored_keys': []
         }
     }
 

@@ -35,6 +35,10 @@ Each source data dictionary also has a key ``metadata``,
 which contains a further nested dictionary with keys:
 ``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec`` and ``timestamp.frac``.
 
+Each source dictionary also has a key ``ignored_keys``, with a list of
+strings identifying keys which were filtered out of the data by configuration
+options on the bridge server.
+
 .. code-block:: python
 
     {
@@ -47,7 +51,8 @@ which contains a further nested dictionary with keys:
                 'timestamp.frac': '4109755',
                 'timestamp.sec': '1526464869',
                 'timestamp.tid': 10000000001
-            }
+            },
+            'ignored_keys': []
         }
     }
 
@@ -69,7 +74,9 @@ Each header part is a dictionary (a msgpack map) containing at least the keys
 ``'SPB_DET_AGIPD1M-1/DET/detector'``. The latter is one of:
 
 * ``'msgpack'``: The following data part is a msgpack map containing the data
-  for this source, excluding any array and image data elements.
+  for this source, excluding any array and image data elements. This also
+  includes the ``metadata`` and ``ignored_keys`` information as described
+  for message format 1.0 above.
 * ``'array'``: The following data part is a raw array. The header
   has additional keys describing the array:
 
