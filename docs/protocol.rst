@@ -74,9 +74,9 @@ Each header part is a dictionary (a msgpack map) containing at least the keys
 ``'SPB_DET_AGIPD1M-1/DET/detector'``. The latter is one of:
 
 * ``'msgpack'``: The following data part is a msgpack map containing the data
-  for this source, excluding any array and image data elements. This also
-  includes the ``metadata`` and ``ignored_keys`` information as described
-  for message format 1.0 above.
+  for this source, excluding any arrays.
+  The data map also includes the ``metadata`` and ``ignored_keys`` information
+  as described for message format 1.0 above.
 * ``'array'``: The following data part is a raw array. The header
   has additional keys describing the array:
 
@@ -84,6 +84,10 @@ Each header part is a dictionary (a msgpack map) containing at least the keys
   * ``dtype``: A string naming a (numpy) dtype, such as ``'uint16'`` for
     16-bit unsigned integers.
   * ``shape``: An array of integers giving the dimensions of the array.
+
+A multipart message might contain data from several sources.
+For each source, there is one header-data pair with ``'msgpack'`` content,
+followed by zero or more header-data pairs for arrays
 
 Image data
 ~~~~~~~~~~
