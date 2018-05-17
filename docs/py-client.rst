@@ -46,8 +46,3 @@ options on the bridge server.
             'ignored_keys': []
         }
     }
-
-.. note::
-
-   Image data from cameras may have further levels of nested dictionaries.
-   This will probably be changed before it's important to properly document it.

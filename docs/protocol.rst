@@ -85,10 +85,28 @@ Each header part is a dictionary (a msgpack map) containing at least the keys
     16-bit unsigned integers.
   * ``shape``: An array of integers giving the dimensions of the array.
 
-* ``'ImageData'``: The following data part is a raw array. The header contains
-  the same keys as for *array*, plus:
+Image data
+~~~~~~~~~~
 
-  * ``params``: Image parameters from Karabo (?)
+Karabo ``ImageData`` objects, holding images from cameras, are represented by a
+number of keys with a common prefix. This prefix is followed by:
+
+- ``.data``: numpy array
+- ``.bitsPerPixels`` int
+- ``.dimensions`` list of int
+- ``.dimensionScales`` str
+- ``.dimensionTypes`` list of int
+- ``.encoding`` str
+- ``.geometry.alignment.offsets`` list of float
+- ``.geometry.alignment.rotations`` list of float
+- ``.geometry.pixelRegion`` list of int - seems optional
+- ``.geometry.subAssemblies`` list of hashes - seems optional
+- ``.geometry.tileId`` int
+- ``.header`` user defined Hash
+- ``.ROIOffsets``  list of int
+- ``.binning`` list of int
+
+Minor changes to this list may occur without a new protocol version.
 
 Protocol implementations
 ------------------------
