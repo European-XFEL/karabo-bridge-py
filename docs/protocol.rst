@@ -48,7 +48,7 @@ options on the bridge server.
             'metadata': {
                 'source': 'SPB_DET_AGIPD1M-1/DET/detector',
                 'timestamp': 1526464869.4109755,
-                'timestamp.frac': '4109755',
+                'timestamp.frac': '410975500000000000',
                 'timestamp.sec': '1526464869',
                 'timestamp.tid': 10000000001
             },
