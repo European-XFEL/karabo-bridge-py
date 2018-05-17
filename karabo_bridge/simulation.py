@@ -50,6 +50,7 @@ def gen_combined_detector_data(source, tid_counter):
     # metadata
     ts = time()
     sec, frac = str(ts).split('.')
+    frac = frac.ljust(18, '0')
     gen[source]['metadata'] = {
         'source': source,
         'timestamp': ts,

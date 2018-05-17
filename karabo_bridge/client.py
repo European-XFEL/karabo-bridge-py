@@ -13,7 +13,6 @@ from functools import partial
 import msgpack
 import numpy as np
 import pickle
-import re
 import zmq
 
 
@@ -37,7 +36,7 @@ class Client:
     endpoint : str
         server socket you want to connect to (only support TCP socket).
     sock : str, optional
-        socket type - supported: REQ.
+        socket type - supported: REQ, SUB.
     ser : str, optional
         Serialization protocol to use to decode the incoming message (default
         is msgpack) - supported: msgpack,pickle.
@@ -46,13 +45,10 @@ class Client:
     ------
     NotImplementedError
         if socker type or serialization algorythm is not supported.
-    SyntaxError
+    ZMQError
         if provided endpoint is not valid.
     """
     def __init__(self, endpoint, sock='REQ', ser='msgpack'):
-        if re.match(r'^tcp://.*:\d{1,5}$', endpoint) is None:
-            raise SyntaxError("Provided endpoint is invalid:", str(endpoint))
-
         self._context = zmq.Context()
         self._socket = None
         self._deserializer = None
