@@ -51,8 +51,8 @@ client without the need to use Karabo.
 
 .. code-block:: python
 
-    >>> from karabo_bridge import server_sim
-    >>> server_sim(1234)
+    >>> from karabo_bridge import start_gen
+    >>> start_gen(1234)
     Server : buffered train: 15202746822
     Server : buffered train: 15202746823
     Server : buffered train: 15202746824
