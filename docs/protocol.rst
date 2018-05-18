@@ -33,11 +33,9 @@ Arrays are serialised using `msgpack_numpy <https://github.com/lebedov/msgpack-n
 
 Each source data dictionary also has a key ``metadata``,
 which contains a further nested dictionary with keys:
-``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec`` and ``timestamp.frac``.
-
-Each source dictionary also has a key ``ignored_keys``, with a list of
-strings identifying keys which were filtered out of the data by configuration
-options on the bridge server.
+``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec``, ``timestamp.frac``,
+and ``ignored_keys``, which is a list of strings identifying keys which were
+filtered out of the data by configuration options on the bridge server.
 
 .. code-block:: python
 
@@ -50,9 +48,9 @@ options on the bridge server.
                 'timestamp': 1526464869.4109755,
                 'timestamp.frac': '410975500000000000',
                 'timestamp.sec': '1526464869',
-                'timestamp.tid': 10000000001
+                'timestamp.tid': 10000000001,
+                'ignored_keys': []
             },
-            'ignored_keys': []
         }
     }
 
@@ -75,7 +73,7 @@ Each header part is a dictionary (a msgpack map) containing at least the keys
 
 * ``'msgpack'``: The following data part is a msgpack map containing the data
   for this source, excluding any arrays.
-  The data map also includes the ``metadata`` and ``ignored_keys`` information
+  The data map also includes the ``metadata`` information
   as described for message format 1.0 above.
 * ``'array'``: The following data part is a raw array. The header
   has additional keys describing the array:
@@ -93,7 +91,7 @@ Image data
 ~~~~~~~~~~
 
 Karabo ``ImageData`` objects, holding images from cameras, are represented by a
-number of keys with a common prefix. This prefix is followed by:
+number of keys with a common prefix. This keys following this prefix include:
 
 - ``.data``: numpy array
 - ``.bitsPerPixels`` int

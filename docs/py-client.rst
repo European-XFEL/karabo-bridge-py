@@ -23,11 +23,9 @@ Python types such as strings and floats, or numpy arrays.
 
 Each source data dictionary also has a key ``metadata``,
 which contains a further nested dictionary with keys:
-``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec`` and ``timestamp.frac``.
-
-Each source dictionary also has a key ``ignored_keys``, with a list of
-strings identifying keys which were filtered out of the data by configuration
-options on the bridge server.
+``source``, ``timestamp``, ``timestamp.tid``, ``timestamp.sec``, ``timestamp.frac``
+and ``ignored_keys``, which is a list of strings identifying keys which were
+filtered out of the data by configuration options on the bridge server.
 
 .. code-block:: python
 
@@ -41,8 +39,8 @@ options on the bridge server.
                 # Timestamps can have attosecond resolution: 18 fractional digits
                 'timestamp.frac': '410975500000000000',
                 'timestamp.sec': '1526464869',
-                'timestamp.tid': 10000000001
+                'timestamp.tid': 10000000001,
+                'ignored_keys': []
             },
-            'ignored_keys': []
         }
     }
