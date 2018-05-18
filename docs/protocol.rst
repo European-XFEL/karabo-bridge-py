@@ -54,11 +54,12 @@ filtered out of the data by configuration options on the bridge server.
         }
     }
 
-Message format 2.0
+Message format 2.1
 ------------------
 
-This format is currently referred to as ``latest`` in code and configuration
-options.
+In options to control the message format, ``latest`` is currently an alias for
+``2.1``. We have skipped describing message format 2.0, as we don't know of any
+code that used it before version 2.1 was defined.
 
 The data is split up into a series of pieces,
 allowing arrays to be serialised more efficiently.

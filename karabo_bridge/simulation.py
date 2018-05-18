@@ -145,7 +145,7 @@ def set_detector_params(det):
 
 
 def containize(data, ser, ser_func, vers):
-    if vers not in ('1.0', 'latest'):
+    if vers not in ('1.0', '2.1', 'latest'):
         raise ValueError("Invalid version %s" % vers)
 
     if vers == '1.0':
@@ -243,7 +243,7 @@ def server_sim(port, *options):
         The data format to send, default is AGIPD detector.
     """
     ser = next((o for o in options if o in ('msgpack', 'pickle')), 'msgpack')
-    version = next((o for o in options if o in ('1.0', 'latest')), 'latest')
+    version = next((o for o in options if o in ('1.0', '2.1', 'latest')), 'latest')
     detector = next((o for o in options if o in ('AGIPD', 'LPD')), 'AGIPD')
 
     start_gen(port, ser, version, detector)
