@@ -1,11 +1,9 @@
+import argparse
 from datetime import datetime
 import h5py
 import numpy as np
-import os.path as osp
 from socket import gethostname
-import sys
 
-from .utils import entrypoint
 from .. import Client
 
 
@@ -65,3 +63,16 @@ def walk_hdf5_to_dict(h5):
         else:
             print('what are you?', type(value))
     return dic
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        prog="karabo-bridge-glimpse",
+        description="Get one Karabo bridge message and save its data to an HDF5 file.")
+    ap.add_argument('endpoint',
+                    help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
+    args = ap.parse_args(argv)
+
+    client = Client(args.endpoint)
+    data = client.next()
+
+    dict_to_hdf5(data, args.endpoint)

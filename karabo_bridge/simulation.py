@@ -22,7 +22,7 @@ import numpy as np
 import zmq
 
 
-__all__ = ['server_sim']
+__all__ = ['start_gen']
 
 
 msgpack_numpy.patch()
@@ -182,13 +182,29 @@ def containize(data, ser, ser_func, vers):
     return msg
 
 
-def start_gen(port, ser, vers, det):
+def start_gen(port, ser='msgpack', version='latest', detector='AGIPD'):
+    """"Karabo bridge server simulation.
+
+    Simulate a Karabo Bridge server and send random data from a detector,
+    either AGIPD or LPD.
+
+    Parameters
+    ----------
+    port: str
+        The port to on which the server is bound.
+    ser: str, optional
+        The serialization algorithm, default is msgpack.
+    version: str, optional
+        The container version of the serialized data.
+    detector: str, optional
+        The data format to send, default is AGIPD detector.
+    """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.setsockopt(zmq.LINGER, 0)
     socket.bind('tcp://*:{}'.format(port))
 
-    source = set_detector_params(det)
+    source = set_detector_params(detector)
 
     if ser == 'msgpack':
         serialize = partial(msgpack.dumps, use_bin_type=True)
@@ -211,7 +227,7 @@ def start_gen(port, ser, vers, det):
                     sleep(0.1)
 
                 data = queue.popleft()
-                msg = containize(data, ser, serialize, vers)
+                msg = containize(data, ser, serialize, version)
                 socket.send_multipart(msg)
             else:
                 print('wrong request')
@@ -221,27 +237,3 @@ def start_gen(port, ser, vers, det):
     finally:
         socket.close()
         context.destroy()
-
-
-def server_sim(port, *options):
-    """"Karabo bridge server simulation.
-
-    Simulate a Karabo Bridge server and send random data from a detector,
-    either AGIPD or LPD.
-
-    Parameters
-    ----------
-    port: str
-        The port to on which the server is bound.
-    ser: str, optional
-        The serialization algorithm, default is msgpack.
-    version: str, optional
-        The container version of the serialized data.
-    detector: str, optional
-        The data format to send, default is AGIPD detector.
-    """
-    ser = next((o for o in options if o in ('msgpack', 'pickle')), 'msgpack')
-    version = next((o for o in options if o in ('1.0', 'latest')), 'latest')
-    detector = next((o for o in options if o in ('AGIPD', 'LPD')), 'AGIPD')
-
-    start_gen(port, ser, version, detector)
