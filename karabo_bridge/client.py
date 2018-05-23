@@ -116,3 +116,15 @@ class Client:
             else:
                 raise RuntimeError('unknown message content:', md['content'])
         return dat
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
