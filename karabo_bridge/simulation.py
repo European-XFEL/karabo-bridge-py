@@ -143,7 +143,7 @@ def set_detector_params(det):
 
 
 def containize(data, ser, ser_func, vers):
-    if vers not in ('1.0', 'latest'):
+    if vers not in ('1.0', '2.1', 'latest'):
         raise ValueError("Invalid version %s" % vers)
 
     if vers == '1.0':
