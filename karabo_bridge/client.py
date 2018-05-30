@@ -119,9 +119,9 @@ class Client:
 
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
+        self._context.destroy(linger=0)
 
     def __iter__(self):
         return self
