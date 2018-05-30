@@ -44,63 +44,94 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 # _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
-def gen_combined_detector_data(source, tid_counter):
+def gen_combined_detector_data(source, tid_counter, corrected=False):
     gen = {source: {}}
 
     # metadata
     ts = time()
     sec, frac = str(ts).split('.')
-    gen[source]['metadata'] = {
-        'source': source,
-        'timestamp': ts,
-        'timestamp.tid': tid_counter,
-        'timestamp.sec': sec,
-        'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+    gen[source] = {
+        'metadata.source': source,
+        'metadata.timestamp': ts,
+        'metadata.timestamp.tid': tid_counter,
+        'metadata.timestamp.sec': sec,
+        'metadata.timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
     # detector random data
-    rand_data = partial(np.random.uniform, low=1500, high=1600,
-                        size=(_MOD_X, _MOD_Y))
-    data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
-    for pulse in range(_PULSES):
-        for module in range(_MODULES):
-            data[pulse, module, ] = rand_data()
-    cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
-    length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
-    pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
-    trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid_counter)
-    status = np.zeros(_PULSES, dtype=np.uint16)
+    if corrected:
+        global _PULSES
+        _PULSES = 31
+        global _SHAPE
+        _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
-    gen[source]['image.data'] = data
-    gen[source]['image.cellId'] = cellId
-    gen[source]['image.length'] = length
-    gen[source]['image.pulseId'] = pulseId
-    gen[source]['image.trainId'] = trainId
-    gen[source]['image.status'] = status
+        rand_data = partial(np.random.uniform, low=1500, high=1600,
+                    size=(_MOD_X, _MOD_Y))
+        data = np.zeros(_SHAPE, dtype=np.float32)
+        gain_data = np.zeros(_SHAPE, dtype=np.uint16)
+        for pulse in range(_PULSES):
+            for module in range(_MODULES):
+                data[pulse, module, ] = rand_data()
+        cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
+        length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
+        pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
+        trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid_counter)
+        status = np.zeros(_PULSES, dtype=np.uint16)
+        passport = [
+            'SPB_DET_AGIPD1M-1/CAL/THRESHOLDING_Q3M2',
+            'SPB_DET_AGIPD1M-1/CAL/OFFSET_CORR_Q3M2',
+            'SPB_DET_AGIPD1M-1/CAL/RELGAIN_CORR_Q3M2'
+        ]
 
-    checksum = np.ones(16, dtype=np.int8)
-    magicNumberEnd = np.ones(8, dtype=np.int8)
+        gen[source]['image.data'] = data
+        gen[source]['image.gain'] = gain_data
+        gen[source]['image.cellId'] = cellId
+        gen[source]['image.length'] = length
+        gen[source]['image.pulseId'] = pulseId
+        gen[source]['image.trainId'] = trainId
+        gen[source]['image.status'] = status
+        gen[source]['image.passport'] = passport
+    else:
+        rand_data = partial(np.random.uniform, low=1500, high=1600,
+                            size=(_MOD_X, _MOD_Y))
+        data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
+        for pulse in range(_PULSES):
+            for module in range(_MODULES):
+                data[pulse, module, ] = rand_data()
+        cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
+        length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
+        pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
+        trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid_counter)
+        status = np.zeros(_PULSES, dtype=np.uint16)
+
+        gen[source]['image.data'] = data
+        gen[source]['image.cellId'] = cellId
+        gen[source]['image.length'] = length
+        gen[source]['image.pulseId'] = pulseId
+        gen[source]['image.trainId'] = trainId
+        gen[source]['image.status'] = status
+
+    checksum = bytes(np.ones(16, dtype=np.int8))
+    magicNumberEnd = bytes(np.ones(8, dtype=np.int8))
     status = 0
     trainId = tid_counter
 
     gen[source]['trailer.checksum'] = checksum
     gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
     gen[source]['trailer.status'] = status
-    gen[source]['trailer.trainId'] = trainId
 
-    data = np.ones(416, dtype=np.uint8)
+    data = bytes(np.ones(416, dtype=np.uint8))
     trainId = tid_counter
 
     gen[source]['detector.data'] = data
-    gen[source]['detector.trainId'] = trainId
 
     dataId = 0
     linkId = np.iinfo(np.uint64).max
-    magicNumberBegin = np.ones(8, dtype=np.int8)
+    magicNumberBegin = bytes(np.ones(8, dtype=np.int8))
     majorTrainFormatVersion = 2
     minorTrainFormatVersion = 1
     pulseCount = _PULSES
-    reserved = np.ones(16, dtype=np.uint8)
+    reserved = bytes(np.ones(16, dtype=np.uint8))
     trainId = tid_counter
 
     gen[source]['header.dataId'] = dataId
