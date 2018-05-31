@@ -44,21 +44,37 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 # _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
-def gen_combined_detector_data(source, tid_counter):
+def gen_combined_detector_data(source, tid_counter, corrected=False):
     gen = {source: {}}
 
     # metadata
     ts = time()
     sec, frac = str(ts).split('.')
-    gen[source]['metadata'] = {
-        'source': source,
-        'timestamp': ts,
-        'timestamp.tid': tid_counter,
-        'timestamp.sec': sec,
-        'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+    gen[source] = {
+        'metadata.source': source,
+        'metadata.timestamp': ts,
+        'metadata.timestamp.tid': tid_counter,
+        'metadata.timestamp.sec': sec,
+        'metadata.timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
     # detector random data
+    if corrected:
+        global _PULSES
+        _PULSES = 31
+        global _SHAPE
+        _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
+
+        gain_data = np.zeros(_SHAPE, dtype=np.uint16)
+        passport = [
+            'SPB_DET_AGIPD1M-1/CAL/THRESHOLDING_Q3M2',
+            'SPB_DET_AGIPD1M-1/CAL/OFFSET_CORR_Q3M2',
+            'SPB_DET_AGIPD1M-1/CAL/RELGAIN_CORR_Q3M2'
+        ]
+
+        gen[source]['image.gain'] = gain_data
+        gen[source]['image.passport'] = passport
+
     rand_data = partial(np.random.uniform, low=1500, high=1600,
                         size=(_MOD_X, _MOD_Y))
     data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
@@ -78,29 +94,27 @@ def gen_combined_detector_data(source, tid_counter):
     gen[source]['image.trainId'] = trainId
     gen[source]['image.status'] = status
 
-    checksum = np.ones(16, dtype=np.int8)
-    magicNumberEnd = np.ones(8, dtype=np.int8)
+    checksum = bytes(np.ones(16, dtype=np.int8))
+    magicNumberEnd = bytes(np.ones(8, dtype=np.int8))
     status = 0
     trainId = tid_counter
 
     gen[source]['trailer.checksum'] = checksum
     gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
     gen[source]['trailer.status'] = status
-    gen[source]['trailer.trainId'] = trainId
 
-    data = np.ones(416, dtype=np.uint8)
+    data = bytes(np.ones(416, dtype=np.uint8))
     trainId = tid_counter
 
     gen[source]['detector.data'] = data
-    gen[source]['detector.trainId'] = trainId
 
     dataId = 0
     linkId = np.iinfo(np.uint64).max
-    magicNumberBegin = np.ones(8, dtype=np.int8)
+    magicNumberBegin = bytes(np.ones(8, dtype=np.int8))
     majorTrainFormatVersion = 2
     minorTrainFormatVersion = 1
     pulseCount = _PULSES
-    reserved = np.ones(16, dtype=np.uint8)
+    reserved = bytes(np.ones(16, dtype=np.uint8))
     trainId = tid_counter
 
     gen[source]['header.dataId'] = dataId
@@ -115,16 +129,17 @@ def gen_combined_detector_data(source, tid_counter):
     return gen
 
 
-def generate(source, queue):
+def generate(source, corrected, queue):
     tid_counter = 10000000000
     try:
         while True:
             if len(queue) < queue.maxlen:
-                data = gen_combined_detector_data(source, tid_counter)
+                data = gen_combined_detector_data(source, tid_counter,
+                                                  corrected=corrected)
                 tid_counter += 1
                 queue.append(data)
                 print('Server : buffered train:',
-                      data[source]['metadata']['timestamp.tid'])
+                      data[source]['metadata.timestamp.tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
@@ -182,7 +197,8 @@ def containize(data, ser, ser_func, vers):
     return msg
 
 
-def start_gen(port, ser='msgpack', version='latest', detector='AGIPD'):
+def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
+              corrected=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -198,6 +214,8 @@ def start_gen(port, ser='msgpack', version='latest', detector='AGIPD'):
         The container version of the serialized data.
     detector: str, optional
         The data format to send, default is AGIPD detector.
+    corrected: bool, optional
+        Generate corrected data output if True, else RAW. Default is True.
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -215,7 +233,7 @@ def start_gen(port, ser='msgpack', version='latest', detector='AGIPD'):
 
     queue = deque(maxlen=10)
 
-    t = Thread(target=generate, args=(source, queue,))
+    t = Thread(target=generate, args=(source, corrected, queue,))
     t.daemon = True
     t.start()
 
