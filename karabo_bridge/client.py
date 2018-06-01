@@ -48,11 +48,14 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack'):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack', protocol_version='2.2'):
 
         self._context = zmq.Context()
         self._socket = None
         self._deserializer = None
+        if protocol_version not in {'1.0', '2.0', '2.1', '2.2'}:
+            raise ValueError('Unknown protocol version %r' % protocol_version)
+        self.protocol_version = protocol_version
 
         if sock == 'REQ':
             self._socket = self._context.socket(zmq.REQ)
@@ -89,30 +92,35 @@ class Client:
         if len(msg) < 2:
             return self._deserializer(msg[-1])
 
-        dat = {}
-        for header, data in zip(*[iter(msg)]*2):
+        data = {}
+        meta = {}
+        for header, payload in zip(*[iter(msg)]*2):
             md = self._deserializer(header)
             source = md['source']
             content = md['content']
+            meta[source] = md.get('metadata', {})
 
             if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
                            'pickle.DEFAULT_PROTOCOL'):
-                dat[source] = self._deserializer(data)
+                data[source] = self._deserializer(payload)
             elif content in ('array', 'ImageData'):
                 dtype = md['dtype']
                 shape = md['shape']
 
-                buf = memoryview(data)
+                buf = memoryview(payload)
                 array = np.frombuffer(buf, dtype=dtype).reshape(shape)
 
                 if content == 'array':
-                    dat[source].update({md['path']: array})
+                    data[source].update({md['path']: array})
                 else:
-                    dat[source].update({md['path']: md['params']})
-                    dat[source][md['path']]['Data'] = array
+                    data[source].update({md['path']: md['params']})
+                    data[source][md['path']]['Data'] = array
             else:
                 raise RuntimeError('unknown message content:', md['content'])
-        return dat
+        if self.protocol_version == '2.2':
+            return data, meta
+        else:
+            return data
 
     def __enter__(self):
         return self
