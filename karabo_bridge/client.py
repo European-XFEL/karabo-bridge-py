@@ -40,11 +40,15 @@ class Client:
     ser : str, optional
         Serialization protocol to use to decode the incoming message (default
         is msgpack) - supported: msgpack,pickle.
+    protocol_version: str, optional
+        Version of the protocol used by the karabo bridge server. Default '2.2'.
 
     Raises
     ------
     NotImplementedError
-        if socker type or serialization algorythm is not supported.
+        if socket type or serialization algorythm is not supported.
+    ValueError
+        if the protocol version is not supported.
     ZMQError
         if provided endpoint is not valid.
     """
@@ -82,6 +86,14 @@ class Client:
         """Request next data container.
 
         This function call is blocking.
+
+        Returns
+        -------
+        data : dict
+            The data for this train, keyed by source name.
+        meta : dict, Only in protocol_version 2.2
+            The metadata for this train, keyed by source name.
+            For previous protocol versions, metadata is held in `data`.
         """
         if self._pattern == zmq.REQ:
             self._socket.send(b'next')
