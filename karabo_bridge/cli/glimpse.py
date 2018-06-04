@@ -100,10 +100,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
-    data = client.next()
-
-    if isinstance(data, tuple):
-        data, meta = data
+    data, meta = client.next()
 
     for k, v in data.items():
         print('\n*** data source: "%s" \ndata:' % k)
