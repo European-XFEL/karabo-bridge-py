@@ -67,7 +67,10 @@ def walk_hdf5_to_dict(h5):
 
 
 def pretty_print(d, ind=''):
-    assert isinstance(d, dict)
+    try:
+        assert isinstance(d, dict)
+    except AssertionError:
+        print(type(d))
     for k, v in sorted(d.items()):
         if isinstance(v, dict):
             print('{}+ [{}] {}'.format(ind, type(v).__name__, k))
@@ -99,7 +102,15 @@ def main(argv=None):
     client = Client(args.endpoint)
     data = client.next()
 
-    pretty_print(data)
+    if isinstance(data, tuple):
+        data, meta = data
+
+    for k, v in data.items():
+        print('\n*** data source: "%s" \ndata:' % k)
+        pretty_print(v)
+        if meta[k]:
+            print('metadata:')
+            pretty_print(meta[k])
 
     if args.save:
         dict_to_hdf5(data, args.endpoint)
