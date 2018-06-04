@@ -67,10 +67,7 @@ def walk_hdf5_to_dict(h5):
 
 
 def pretty_print(d, ind=''):
-    try:
-        assert isinstance(d, dict)
-    except AssertionError:
-        print(type(d))
+    assert isinstance(d, dict)
     for k, v in sorted(d.items()):
         if isinstance(v, dict):
             print('{}+ [{}] {}'.format(ind, type(v).__name__, k))
