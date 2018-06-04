@@ -52,14 +52,11 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack', protocol_version='2.2'):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack'):
 
         self._context = zmq.Context()
         self._socket = None
         self._deserializer = None
-        if protocol_version not in {'1.0', '2.0', '2.1', '2.2'}:
-            raise ValueError('Unknown protocol version %r' % protocol_version)
-        self.protocol_version = protocol_version
 
         if sock == 'REQ':
             self._socket = self._context.socket(zmq.REQ)
@@ -91,9 +88,10 @@ class Client:
         -------
         data : dict
             The data for this train, keyed by source name.
-        meta : dict, Only in protocol_version 2.2
+        meta : dict
             The metadata for this train, keyed by source name.
-            For previous protocol versions, metadata is held in `data`.
+            For previous protocol versions, all values are empty dict, metadata
+            is held in `data` dict.
         """
         if self._pattern == zmq.REQ:
             self._socket.send(b'next')
@@ -129,10 +127,7 @@ class Client:
                     data[source][md['path']]['Data'] = array
             else:
                 raise RuntimeError('unknown message content:', md['content'])
-        if self.protocol_version == '2.2':
-            return data, meta
-        else:
-            return data
+        return data, meta
 
     def __enter__(self):
         return self
