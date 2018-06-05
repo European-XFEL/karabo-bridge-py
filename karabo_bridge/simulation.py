@@ -47,16 +47,17 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1):
     gen = {source: {}}
+    meta = {}
 
     # metadata
     ts = time()
     sec, frac = str(ts).split('.')
-    gen[source] = {
-        'metadata.source': source,
-        'metadata.timestamp': ts,
-        'metadata.timestamp.tid': tid_counter,
-        'metadata.timestamp.sec': sec,
-        'metadata.timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+    meta[source] = {
+        'source': source,
+        'timestamp': ts,
+        'timestamp.tid': tid_counter,
+        'timestamp.sec': sec,
+        'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
     # detector random data
@@ -131,11 +132,13 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
         for i in range(nsources):
             src = source + "-" + str(i+1)
             gen[src] = copy.deepcopy(gen[source])
-            gen[src]['metadata.source'] = src
+            meta[src] = copy.deepcopy(gen[source])
+            meta[src]['source'] = src
 
         del gen[source]
+        del meta[source]
 
-    return gen
+    return gen, meta
 
 
 def generate(source, corrected, queue, nsources):
@@ -143,13 +146,13 @@ def generate(source, corrected, queue, nsources):
     try:
         while True:
             if len(queue) < queue.maxlen:
-                data = gen_combined_detector_data(source, tid_counter,
-                                                  corrected=corrected,
-                                                  nsources=nsources)
+                data, meta = gen_combined_detector_data(source, tid_counter,
+                                                        corrected=corrected,
+                                                        nsources=nsources)
                 tid_counter += 1
-                queue.append(data)
+                queue.append((data, meta))
                 print('Server : buffered train:',
-                      data[list(data.keys())[0]]['metadata.timestamp.tid'])
+                      meta[list(meta.keys())[0]]['timestamp.tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
@@ -167,12 +170,25 @@ def set_detector_params(det):
         return 'SPB_DET_AGIPD1M-1/DET/detector'
 
 
-def containize(data, ser, ser_func, vers):
-    if vers not in ('1.0', '2.1', 'latest'):
+def containize(train_data, ser, ser_func, vers):
+    data, meta = train_data
+
+    if vers not in ('1.0', '2.0', '2.1', '2.2'):
         raise ValueError("Invalid version %s" % vers)
 
-    if vers == '1.0':
-        return [ser_func(data)]
+    if vers in ('1.0', '2.0'):
+        for key, value in meta.items():
+            data[key].update({'metadata': value})
+
+        if vers == '1.0':
+            return [ser_func(data)]
+
+    elif vers == '2.1':
+        for key, value in meta.items():
+            m = {}
+            for mkey, mval in value.items():
+                m['metadata.'+mkey] = mval
+            data[key].update(m)
 
     newdata = {}
     for src, props in data.items():
@@ -207,7 +223,7 @@ def containize(data, ser, ser_func, vers):
     return msg
 
 
-def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
+def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
               corrected=True, nsources=1):
     """"Karabo bridge server simulation.
 
@@ -256,8 +272,8 @@ def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
                 while len(queue) <= 0:
                     sleep(0.1)
 
-                data = queue.popleft()
-                msg = containize(data, ser, serialize, version)
+                train = queue.popleft()
+                msg = containize(train, ser, serialize, version)
                 socket.send_multipart(msg)
             else:
                 print('wrong request')

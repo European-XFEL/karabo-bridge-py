@@ -44,7 +44,7 @@ class Client:
     Raises
     ------
     NotImplementedError
-        if socker type or serialization algorythm is not supported.
+        if socket type or serialization algorythm is not supported.
     ZMQError
         if provided endpoint is not valid.
     """
@@ -79,6 +79,17 @@ class Client:
         """Request next data container.
 
         This function call is blocking.
+
+        Returns
+        -------
+        data : dict
+            The data for this train, keyed by source name.
+        meta : dict
+            The metadata for this train, keyed by source name.
+
+            This dictionary is populated for protocol version 1.0 and 2.2.
+            For other protocol versions, metadata information is available in
+            `data` dict.
         """
         if self._pattern == zmq.REQ:
             self._socket.send(b'next')
@@ -86,33 +97,39 @@ class Client:
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
-        if len(msg) < 2:
-            return self._deserializer(msg[-1])
+        if len(msg) < 2:  # protocol version 1.0
+            data = self._deserializer(msg[-1])
+            meta = {}
+            for key, value in data.items():
+                meta[key] = value.get('metadata', {})
+            return data, meta
 
-        dat = {}
-        for header, data in zip(*[iter(msg)]*2):
+        data = {}
+        meta = {}
+        for header, payload in zip(*[iter(msg)]*2):
             md = self._deserializer(header)
             source = md['source']
             content = md['content']
 
             if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
                            'pickle.DEFAULT_PROTOCOL'):
-                dat[source] = self._deserializer(data)
+                data[source] = self._deserializer(payload)
+                meta[source] = md.get('metadata', {})
             elif content in ('array', 'ImageData'):
                 dtype = md['dtype']
                 shape = md['shape']
 
-                buf = memoryview(data)
+                buf = memoryview(payload)
                 array = np.frombuffer(buf, dtype=dtype).reshape(shape)
 
                 if content == 'array':
-                    dat[source].update({md['path']: array})
+                    data[source].update({md['path']: array})
                 else:
-                    dat[source].update({md['path']: md['params']})
-                    dat[source][md['path']]['Data'] = array
+                    data[source].update({md['path']: md['params']})
+                    data[source][md['path']]['Data'] = array
             else:
                 raise RuntimeError('unknown message content:', md['content'])
-        return dat
+        return data, meta
 
     def __enter__(self):
         return self
