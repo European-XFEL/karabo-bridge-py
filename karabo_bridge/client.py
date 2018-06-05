@@ -40,8 +40,6 @@ class Client:
     ser : str, optional
         Serialization protocol to use to decode the incoming message (default
         is msgpack) - supported: msgpack,pickle.
-    protocol_version: str, optional
-        Version of the protocol used by the karabo bridge server. Default '2.2'.
 
     Raises
     ------
