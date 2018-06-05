@@ -15,6 +15,7 @@ from functools import partial
 import pickle
 from time import sleep, time
 from threading import Thread
+import copy
 
 import msgpack
 import msgpack_numpy
@@ -44,7 +45,7 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 # _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
-def gen_combined_detector_data(source, tid_counter, corrected=False):
+def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1):
     gen = {source: {}}
     meta = {}
 
@@ -127,20 +128,31 @@ def gen_combined_detector_data(source, tid_counter, corrected=False):
     gen[source]['header.reserved'] = reserved
     gen[source]['header.trainId'] = tid_counter
 
+    if nsources > 1:
+        for i in range(nsources):
+            src = source + "-" + str(i+1)
+            gen[src] = copy.deepcopy(gen[source])
+            meta[src] = copy.deepcopy(gen[source])
+            meta[src]['source'] = src
+
+        del gen[source]
+        del meta[source]
+
     return gen, meta
 
 
-def generate(source, corrected, queue):
+def generate(source, corrected, queue, nsources):
     tid_counter = 10000000000
     try:
         while True:
             if len(queue) < queue.maxlen:
                 data, meta = gen_combined_detector_data(source, tid_counter,
-                                                        corrected=corrected)
+                                                        corrected=corrected,
+                                                        nsources=nsources)
                 tid_counter += 1
                 queue.append((data, meta))
                 print('Server : buffered train:',
-                      meta[source]['timestamp.tid'])
+                      meta[list(meta.keys())[0]]['timestamp.tid'])
             else:
                 sleep(0.1)
     except KeyboardInterrupt:
@@ -212,7 +224,7 @@ def containize(train_data, ser, ser_func, vers):
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              corrected=True):
+              corrected=True, nsources=1):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -230,6 +242,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         The data format to send, default is AGIPD detector.
     corrected: bool, optional
         Generate corrected data output if True, else RAW. Default is True.
+    nsources: int, optional
+        Number of sources.
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -247,7 +261,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
     queue = deque(maxlen=10)
 
-    t = Thread(target=generate, args=(source, corrected, queue,))
+    t = Thread(target=generate, args=(source, corrected, queue, nsources, ))
     t.daemon = True
     t.start()
 
