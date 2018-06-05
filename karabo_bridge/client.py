@@ -45,8 +45,6 @@ class Client:
     ------
     NotImplementedError
         if socket type or serialization algorythm is not supported.
-    ValueError
-        if the protocol version is not supported.
     ZMQError
         if provided endpoint is not valid.
     """
