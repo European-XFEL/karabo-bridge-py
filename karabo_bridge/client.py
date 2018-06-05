@@ -90,8 +90,10 @@ class Client:
             The data for this train, keyed by source name.
         meta : dict
             The metadata for this train, keyed by source name.
-            For previous protocol versions, all values are empty dict, metadata
-            is held in `data` dict.
+
+            This dictionary is populated for protocol version 1.0 and 2.2.
+            For other protocol versions, metadata information is available in
+            `data` dict.
         """
         if self._pattern == zmq.REQ:
             self._socket.send(b'next')
