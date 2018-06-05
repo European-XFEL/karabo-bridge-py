@@ -99,7 +99,7 @@ class Client:
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
-        if len(msg) < 2:
+        if len(msg) < 2:  # protocol version 1.0
             data = self._deserializer(msg[-1])
             meta = {}
             for key, value in data.items():
@@ -112,11 +112,11 @@ class Client:
             md = self._deserializer(header)
             source = md['source']
             content = md['content']
-            meta[source] = md.get('metadata', {})
 
             if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
                            'pickle.DEFAULT_PROTOCOL'):
                 data[source] = self._deserializer(payload)
+                meta[source] = md.get('metadata', {})
             elif content in ('array', 'ImageData'):
                 dtype = md['dtype']
                 shape = md['shape']
