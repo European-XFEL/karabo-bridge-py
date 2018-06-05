@@ -100,7 +100,11 @@ class Client:
 
     def _deserialize(self, msg):
         if len(msg) < 2:
-            return self._deserializer(msg[-1])
+            data = self._deserializer(msg[-1])
+            meta = {}
+            for key, value in data.items():
+                meta[key] = value.get('metadata', {})
+            return data, meta
 
         data = {}
         meta = {}
