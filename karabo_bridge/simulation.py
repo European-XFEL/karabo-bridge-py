@@ -45,7 +45,7 @@ _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 # _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
 
-def gen_combined_detector_data(source, tid_counter, corrected=False, ns=1):
+def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1):
     gen = {source: {}}
 
     # metadata
@@ -127,8 +127,8 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, ns=1):
     gen[source]['header.reserved'] = reserved
     gen[source]['header.trainId'] = tid_counter
 
-    if ns > 1:
-        for i in range(ns):
+    if nsources > 1:
+        for i in range(nsources):
             src = source + "-" + str(i+1)
             gen[src] = copy.deepcopy(gen[source])
             gen[src]['metadata.source'] = src
@@ -138,14 +138,14 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, ns=1):
     return gen
 
 
-def generate(source, corrected, queue, ns):
+def generate(source, corrected, queue, nsources):
     tid_counter = 10000000000
     try:
         while True:
             if len(queue) < queue.maxlen:
                 data = gen_combined_detector_data(source, tid_counter,
                                                   corrected=corrected,
-                                                  ns=ns)
+                                                  nsources=nsources)
                 tid_counter += 1
                 queue.append(data)
                 print('Server : buffered train:',
@@ -208,7 +208,7 @@ def containize(data, ser, ser_func, vers):
 
 
 def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
-              corrected=True, ns=1):
+              corrected=True, nsources=1):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -226,7 +226,7 @@ def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
         The data format to send, default is AGIPD detector.
     corrected: bool, optional
         Generate corrected data output if True, else RAW. Default is True.
-    ns: int, optional
+    nsources: int, optional
         Number of sources.
     """
     context = zmq.Context()
@@ -245,7 +245,7 @@ def start_gen(port, ser='msgpack', version='latest', detector='AGIPD',
 
     queue = deque(maxlen=10)
 
-    t = Thread(target=generate, args=(source, corrected, queue, ns, ))
+    t = Thread(target=generate, args=(source, corrected, queue, nsources, ))
     t.daemon = True
     t.start()
 
