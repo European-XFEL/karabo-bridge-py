@@ -1,4 +1,5 @@
 import argparse
+from collections import Sequence
 from datetime import datetime
 import h5py
 import numpy as np
@@ -64,15 +65,46 @@ def walk_hdf5_to_dict(h5):
             print('what are you?', type(value))
     return dic
 
+
+def pretty_print(d, ind=''):
+    assert isinstance(d, dict)
+    for k, v in sorted(d.items()):
+        if isinstance(v, dict):
+            print('{}+ [{}] {}'.format(ind, type(v).__name__, k))
+            pretty_print(v, ind=ind+'  ')
+            continue
+        elif isinstance(v, np.ndarray):
+            node = '{}- [{}] {}, {}, {}'.format(
+                ind, type(v).__name__, k, v.dtype, v.shape)
+        elif isinstance(v, (bytes, bytearray, memoryview, Sequence)):
+            strv = str(v)
+            node = '{}- [{}] {}, '.format(ind, type(v).__name__, k)
+            node += strv[:77-len(node)]+'...' if len(strv) > 77-len(node) else strv
+        else:
+            node = '{}- [{}] {}, {}'.format(ind, type(v).__name__, k, v)
+        print(node)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="karabo-bridge-glimpse",
-        description="Get one Karabo bridge message and save its data to an HDF5 file.")
+        description="Get one Karabo bridge message and prints its data"
+                    "structure. optionally: save its data to an HDF5 file.")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
+    ap.add_argument('-s', '--save', action='store_true',
+                    help='Save the received train data to a HDF5 file.')
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
-    data = client.next()
+    data, meta = client.next()
 
-    dict_to_hdf5(data, args.endpoint)
+    for k, v in data.items():
+        print('\n*** data source: "%s" \ndata:' % k)
+        pretty_print(v)
+        if meta[k]:
+            print('metadata:')
+            pretty_print(meta[k])
+
+    if args.save:
+        dict_to_hdf5(data, args.endpoint)
