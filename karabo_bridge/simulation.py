@@ -32,13 +32,13 @@ msgpack_numpy.patch()
 DETECTORS = {
     'AGIPD': {
         'source': 'SPB_DET_AGIPD1M-1/DET/detector',
-        'pulses': 32,
+        'pulses': 64,
         'modules': 16,
         'module_shape': (512, 128),  # (x, y)
     },
     'LPD': {
         'source': 'FXE_DET_LPD1M-1/DET/detector',
-        'pulses': 32,
+        'pulses': 300,
         'modules': 16,
         'module_shape': (256, 256),  # (x, y)
     }
@@ -61,8 +61,11 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
         'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
-    if corrected:
-        pulse_count = 31   # ???
+    if corrected and detector_info['source'] == 'SPB_DET_AGIPD1M-1/DET/detector':
+        # Corrected data from AGIPD might halve the number of frames and cut off
+        # the first one.
+        # TODO: Check if this is still true
+        pulse_count = 31
     else:
         pulse_count = detector_info['pulses']
     array_shape = (pulse_count, detector_info['modules']) + detector_info['module_shape']
