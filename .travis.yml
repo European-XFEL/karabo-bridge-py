@@ -6,6 +6,7 @@ python:
 
 install:
   - pip install -e .[test]
+  - pip install codecov
 
 script:
   - py.test --cov karabo_bridge
