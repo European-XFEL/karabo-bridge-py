@@ -37,6 +37,13 @@ setup(name="karabo_bridge",
           'numpy',
           'pyzmq>=17.0.0',
       ],
+      extras_require={
+          'test': [
+              'pytest',
+              'pytest-cov',
+              'h5py',
+          ]
+      },
       packages=find_packages(),
       entry_points={
           'console_scripts': [

@@ -13,6 +13,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 from collections import deque
 from functools import partial
 import pickle
+from queue import Queue, Empty
 from time import sleep, time
 from threading import Thread
 import copy
@@ -141,24 +142,17 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
 
     return gen, meta
 
-
-def generate(detector_info, corrected, queue, nsources):
+def generate(detector_info, corrected, nsources, *, debug=False):
     tid_counter = 10000000000
-    try:
-        while True:
-            if len(queue) < queue.maxlen:
-                data, meta = gen_combined_detector_data(detector_info, tid_counter,
-                                                        corrected=corrected,
-                                                        nsources=nsources)
-                tid_counter += 1
-                queue.append((data, meta))
-                print('Server : buffered train:',
-                      meta[list(meta.keys())[0]]['timestamp.tid'])
-            else:
-                sleep(0.1)
-    except KeyboardInterrupt:
-        return
-
+    while True:
+        data, meta = gen_combined_detector_data(detector_info, tid_counter,
+                                                corrected=corrected,
+                                                nsources=nsources)
+        tid_counter += 1
+        yield (data, meta)
+        if debug:
+            print('Server : emitted train:',
+                  meta[list(meta.keys())[0]]['timestamp.tid'])
 
 def containize(train_data, ser, ser_func, vers):
     data, meta = train_data
@@ -247,21 +241,14 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
 
-    queue = deque(maxlen=10)
     detector_info = DETECTORS[detector]
-
-    t = Thread(target=generate, args=(detector_info, corrected, queue, nsources, ))
-    t.daemon = True
-    t.start()
+    generator = generate(detector_info, corrected, nsources)
 
     try:
         while True:
             msg = socket.recv()
             if msg == b'next':
-                while len(queue) <= 0:
-                    sleep(0.1)
-
-                train = queue.popleft()
+                train = next(generator)
                 msg = containize(train, ser, serialize, version)
                 socket.send_multipart(msg)
             else:
@@ -272,3 +259,63 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     finally:
         socket.close()
         context.destroy()
+
+
+class ServeInThread(Thread):
+    def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
+                 detector='AGIPD', corrected=True, nsources=1):
+        super().__init__()
+        self.protocol_version = protocol_version
+
+        self.serialization_fmt = ser
+        if ser == 'msgpack':
+            self.serialize = partial(msgpack.dumps, use_bin_type=True)
+        elif ser == 'pickle':
+            self.serialize = pickle.dumps
+        else:
+            raise ValueError("Unknown serialisation format %s" % ser)
+
+        detector_info = DETECTORS[detector]
+
+        self.generator = generate(detector_info, corrected, nsources)
+
+        self.zmq_context = zmq.Context()
+        self.server_socket = self.zmq_context.socket(zmq.REP)
+        self.server_socket.setsockopt(zmq.LINGER, 0)
+        self.server_socket.bind(endpoint)
+
+        self.stopper_r = self.zmq_context.socket(zmq.PAIR)
+        self.stopper_r.bind('inproc://sim-server-stop')
+        self.stopper_w = self.zmq_context.socket(zmq.PAIR)
+        self.stopper_w.connect('inproc://sim-server-stop')
+
+
+    def run(self):
+        poller = zmq.Poller()
+        poller.register(self.server_socket, zmq.POLLIN)
+        poller.register(self.stopper_r, zmq.POLLIN)
+        while True:
+            events = dict(poller.poll())
+            if self.server_socket in events:
+                msg = self.server_socket.recv()
+                if msg == b'next':
+                    train = next(self.generator)
+                    msg = containize(train, self.serialization_fmt,
+                                     self.serialize, self.protocol_version)
+                    self.server_socket.send_multipart(msg)
+                else:
+                    print('Unrecognised request:', msg)
+            elif self.stopper_r in events:
+                self.stopper_r.recv()
+                break
+
+    def stop(self):
+        self.stopper_w.send(b'')
+        self.join()
+        self.zmq_context.destroy()
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
