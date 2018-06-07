@@ -29,23 +29,24 @@ __all__ = ['start_gen']
 msgpack_numpy.patch()
 
 
-# AGIPD
-_PULSES = 32
-_MODULES = 16
-_MOD_X = 512
-_MOD_Y = 128
-_SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
+DETECTORS = {
+    'AGIPD': {
+        'source': 'SPB_DET_AGIPD1M-1/DET/detector',
+        'pulses': 32,
+        'modules': 16,
+        'module_shape': (512, 128),  # (x, y)
+    },
+    'LPD': {
+        'source': 'FXE_DET_LPD1M-1/DET/detector',
+        'pulses': 32,
+        'modules': 16,
+        'module_shape': (256, 256),  # (x, y)
+    }
+}
 
 
-# LPD
-# _PULSES = 32
-# _MODULES = 16
-# _MOD_X = 256
-# _MOD_Y = 256
-# _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
-
-
-def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1):
+def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsources=1):
+    source = detector_info['source']
     gen = {source: {}}
     meta = {}
 
@@ -60,14 +61,15 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
         'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
+    if corrected:
+        pulse_count = 31   # ???
+    else:
+        pulse_count = detector_info['pulses']
+    array_shape = (pulse_count, detector_info['modules']) + detector_info['module_shape']
+
     # detector random data
     if corrected:
-        global _PULSES
-        _PULSES = 31
-        global _SHAPE
-        _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
-
-        gain_data = np.zeros(_SHAPE, dtype=np.uint16)
+        gain_data = np.zeros(array_shape, dtype=np.uint16)
         passport = [
             'SPB_DET_AGIPD1M-1/CAL/THRESHOLDING_Q3M2',
             'SPB_DET_AGIPD1M-1/CAL/OFFSET_CORR_Q3M2',
@@ -78,16 +80,16 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
         gen[source]['image.passport'] = passport
 
     rand_data = partial(np.random.uniform, low=1500, high=1600,
-                        size=(_MOD_X, _MOD_Y))
-    data = np.zeros(_SHAPE, dtype=np.uint16)  # np.float32)
-    for pulse in range(_PULSES):
-        for module in range(_MODULES):
+                        size=detector_info['module_shape'])
+    data = np.zeros(array_shape, dtype=np.uint16)  # np.float32)
+    for pulse in range(pulse_count):
+        for module in range(detector_info['modules']):
             data[pulse, module, ] = rand_data()
-    cellId = np.array([i for i in range(_PULSES)], dtype=np.uint16)
-    length = np.ones(_PULSES, dtype=np.uint32) * int(131072)
-    pulseId = np.array([i for i in range(_PULSES)], dtype=np.uint64)
-    trainId = np.ones(_PULSES, dtype=np.uint64) * int(tid_counter)
-    status = np.zeros(_PULSES, dtype=np.uint16)
+    cellId = np.array([i for i in range(pulse_count)], dtype=np.uint16)
+    length = np.ones(pulse_count, dtype=np.uint32) * int(131072)
+    pulseId = np.array([i for i in range(pulse_count)], dtype=np.uint64)
+    trainId = np.ones(pulse_count, dtype=np.uint64) * int(tid_counter)
+    status = np.zeros(pulse_count, dtype=np.uint16)
 
     gen[source]['image.data'] = data
     gen[source]['image.cellId'] = cellId
@@ -99,14 +101,12 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
     checksum = bytes(np.ones(16, dtype=np.int8))
     magicNumberEnd = bytes(np.ones(8, dtype=np.int8))
     status = 0
-    trainId = tid_counter
 
     gen[source]['trailer.checksum'] = checksum
     gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
     gen[source]['trailer.status'] = status
 
     data = bytes(np.ones(416, dtype=np.uint8))
-    trainId = tid_counter
 
     gen[source]['detector.data'] = data
 
@@ -115,16 +115,14 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
     magicNumberBegin = bytes(np.ones(8, dtype=np.int8))
     majorTrainFormatVersion = 2
     minorTrainFormatVersion = 1
-    pulseCount = _PULSES
     reserved = bytes(np.ones(16, dtype=np.uint8))
-    trainId = tid_counter
 
     gen[source]['header.dataId'] = dataId
     gen[source]['header.linkId'] = linkId
     gen[source]['header.magicNumberBegin'] = magicNumberBegin
     gen[source]['header.majorTrainFormatVersion'] = majorTrainFormatVersion
     gen[source]['header.minorTrainFormatVersion'] = minorTrainFormatVersion
-    gen[source]['header.pulseCount'] = pulseCount
+    gen[source]['header.pulseCount'] = pulse_count
     gen[source]['header.reserved'] = reserved
     gen[source]['header.trainId'] = tid_counter
 
@@ -141,12 +139,12 @@ def gen_combined_detector_data(source, tid_counter, corrected=False, nsources=1)
     return gen, meta
 
 
-def generate(source, corrected, queue, nsources):
+def generate(detector_info, corrected, queue, nsources):
     tid_counter = 10000000000
     try:
         while True:
             if len(queue) < queue.maxlen:
-                data, meta = gen_combined_detector_data(source, tid_counter,
+                data, meta = gen_combined_detector_data(detector_info, tid_counter,
                                                         corrected=corrected,
                                                         nsources=nsources)
                 tid_counter += 1
@@ -157,17 +155,6 @@ def generate(source, corrected, queue, nsources):
                 sleep(0.1)
     except KeyboardInterrupt:
         return
-
-
-def set_detector_params(det):
-    if det == 'LPD':
-        global _MOD_X
-        _MOD_X = 256
-        global _MOD_Y
-        _MOD_Y = 256
-        return 'FXE_DET_LPD1M-1/DET/detector'
-    else:
-        return 'SPB_DET_AGIPD1M-1/DET/detector'
 
 
 def containize(train_data, ser, ser_func, vers):
@@ -250,8 +237,6 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     socket.setsockopt(zmq.LINGER, 0)
     socket.bind('tcp://*:{}'.format(port))
 
-    source = set_detector_params(detector)
-
     if ser == 'msgpack':
         serialize = partial(msgpack.dumps, use_bin_type=True)
     elif ser == 'pickle':
@@ -260,8 +245,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         raise ValueError("Unknown serialisation format %s" % ser)
 
     queue = deque(maxlen=10)
+    detector_info = DETECTORS[detector]
 
-    t = Thread(target=generate, args=(source, corrected, queue, nsources, ))
+    t = Thread(target=generate, args=(detector_info, corrected, queue, nsources, ))
     t.daemon = True
     t.start()
 
