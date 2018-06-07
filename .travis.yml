@@ -1,0 +1,13 @@
+language: python
+python:
+  - 3.6
+  - 3.5
+  - 3.4
+
+install:
+  - pip install -e .[test]
+
+script:
+  - py.test --cov karabo_bridge
+
+after_success: codecov
