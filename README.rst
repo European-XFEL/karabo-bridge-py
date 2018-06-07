@@ -2,6 +2,14 @@
 European XFEL Karabo Bridge
 ===========================
 
+.. image:: https://travis-ci.org/European-XFEL/karabo-bridge-py.svg?branch=master
+  :target: https://travis-ci.org/European-XFEL/karabo-bridge-py
+
+.. image:: https://codecov.io/gh/European-XFEL/karabo-bridge-py/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/European-XFEL/karabo-bridge-py
+
+
+
 ``karabo_bridge`` is a Python 3 client to receive pipeline data from the
 Karabo control system used at `European XFEL <https://www.xfel.eu/>`_.
 A simulated Karabo bridge server is included to allow testing code without
