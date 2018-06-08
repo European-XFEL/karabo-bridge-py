@@ -10,11 +10,10 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from collections import deque
 from functools import partial
 from os import uname
 import pickle
-from queue import Queue, Empty
+from queue import Queue
 from time import sleep, time
 from threading import Thread
 import copy
@@ -36,18 +35,19 @@ DETECTORS = {
         'source': 'SPB_DET_AGIPD1M-1/DET/detector',
         'pulses': 64,
         'modules': 16,
-        'module_shape': (128, 512),  # (x, y)
+        'module_shape': (128, 512),  # (y, x)
     },
     'LPD': {
         'source': 'FXE_DET_LPD1M-1/DET/detector',
         'pulses': 300,
         'modules': 16,
-        'module_shape': (256, 256),  # (x, y)
+        'module_shape': (256, 256),  # (y, x)
     }
 }
 
 
-def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsources=1):
+def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
+                               nsources=1):
     source = detector_info['source']
     gen = {source: {}}
     meta = {}

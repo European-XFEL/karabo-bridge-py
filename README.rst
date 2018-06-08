@@ -40,7 +40,7 @@ The function returns 2 dictionaries: the first one holds a train data and the
 second one holds the associated train metadata. Both dictionaries are keyed by
 source name, and the values are dictionaries containing parameters name and
 values for data and metadata information (source name, timestamp, trainId)
-for the "metadata". Values are all built-in python types, or numpy arrays.
+for the metadata. Values are all built-in python types, or numpy arrays.
 
 .. code-block:: python
 
@@ -51,7 +51,7 @@ for the "metadata". Values are all built-in python types, or numpy arrays.
     dict_keys(['source1', 'source2', 'source3'])
     >>> data['source1'].keys()
     dict_keys(['param1', 'param2'])
-    >>> meta['source1']
+    >>> metadata['source1']
     {'source1': {'source': 'source1',
       'timestamp': 1528476983.744877,
       'timestamp.frac': '744877000000000000',
@@ -61,8 +61,8 @@ for the "metadata". Values are all built-in python types, or numpy arrays.
 Use the Simulation server
 +++++++++++++++++++++++++
 
-To start a simulation, call the ``server_sim`` function and provide a port to bind to.
-You can the use the ``Client`` class and connect to it to test the
+To start a simulation, call the ``start_gen`` function and provide a port to
+bind to. You can the use the ``Client`` class and connect to it to test the
 client without the need to use Karabo.
 
 .. code-block:: python
