@@ -1,9 +1,13 @@
+"""Inspect a single message from Karabo bridge.
+"""
+
 import argparse
 from collections import Sequence
 from datetime import datetime
 import h5py
 import numpy as np
 from socket import gethostname
+from time import localtime, strftime, time
 
 from .. import Client
 
@@ -65,8 +69,59 @@ def walk_hdf5_to_dict(h5):
             print('what are you?', type(value))
     return dic
 
+def print_one_train(client, verbosity=0):
+    """Retrieve data for one train and print it.
+
+    Returns the (data, metadata) dicts from the client.
+
+    This is used by the -glimpse and -monitor command line tools.
+    """
+    ts_before = time()
+    data, meta = client.next()
+    ts_after = time()
+
+    if not data:
+        print("Empty data")
+        return
+
+    train_id = list(meta.values())[0]['timestamp.tid']
+    print("Train ID:", train_id, "--------------------------")
+    delta = ts_after - ts_before
+    print('Data from {} sources, REQ-REP took {:.2f} ms'
+          .format(len(data), delta))
+    print()
+
+    for i, (source, src_data) in enumerate(sorted(data.items()), start=1):
+        src_metadata = meta.get(source, {})
+        tid = src_metadata.get('timestamp.tid', 0)
+        print("Source {}: {!r} @ {}".format(i, source, tid))
+        try:
+            ts = src_metadata['timestamp']
+        except KeyError:
+            print("No timestamp")
+        else:
+            dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
+
+            delay = (ts_after - ts) * 1000
+            print('timestamp: {} ({}) | delay: {:.2f} ms'
+                  .format(dt, ts, delay))
+
+        if verbosity < 1:
+            print("- data:", sorted(src_data))
+            print("- metadata:", sorted(src_metadata))
+        else:
+            print('data:')
+            pretty_print(src_data, verbosity=verbosity - 1)
+            if src_metadata:
+                print('metadata:')
+                pretty_print(src_metadata)
+        print()
+
+    return data, meta
 
 def pretty_print(d, ind='', verbosity=0):
+    """Pretty print a data dictionary from the bridge client
+    """
     assert isinstance(d, dict)
     for k, v in sorted(d.items()):
         str_base = '{} - [{}] {}'.format(ind, type(v).__name__, k)
@@ -96,20 +151,13 @@ def main(argv=None):
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
     ap.add_argument('-s', '--save', action='store_true',
-                    help='Save the received train data to a HDF5 file.')
+                    help='Save the received train data to a HDF5 file')
     ap.add_argument('-v', '--verbose', action='count', default=0,
-                    help='Select verbosity (-vv for most verbose).')
+                    help='Select verbosity (-vv for most verbose)')
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
-    data, meta = client.next()
-
-    for k, v in data.items():
-        print('\n*** data source: "%s" \ndata:' % k)
-        pretty_print(v, verbosity=args.verbose)
-        if meta[k]:
-            print('metadata:')
-            pretty_print(meta[k])
+    data, _ = print_one_train(client, verbosity=args.verbose + 1)
 
     if args.save:
         dict_to_hdf5(data, args.endpoint)

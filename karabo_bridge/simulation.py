@@ -184,11 +184,13 @@ def containize(train_data, ser, ser_func, vers):
                 arr_keys.append(key)
         for arr_key in arr_keys:
             data[src].pop(arr_key)
-        newdata[src] = (data[src], arr, {})  # the last item is ImageData objects.
+        newdata[src] = (data[src], arr, meta[src])
 
     msg = []
-    for src, (dic, arr, img) in newdata.items():
+    for src, (dic, arr, src_metadata) in newdata.items():
         header = {'source': src, 'content': str(ser)}
+        if vers == '2.2':
+            header['metadata'] = src_metadata
         msg.append(ser_func(header))
         msg.append(ser_func(dic))
 
@@ -199,10 +201,6 @@ def containize(train_data, ser, ser_func, vers):
             if not array.flags['C_CONTIGUOUS']:
                 array = np.ascontiguousarray(array)
             msg.append(memoryview(array))
-
-        for path, image in img.items():
-            # TODO
-            continue
 
     return msg
 

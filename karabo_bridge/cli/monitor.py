@@ -1,32 +1,11 @@
 #!/usr/bin/env python
+"""Monitor messages coming from Karabo bridge."""
 
 import argparse
-from time import localtime, strftime, time
 
+from .glimpse import print_one_train
 from ..client import Client
 
-
-def monitor(client):    
-    before = time()
-    data = client.next()
-    after = time()
-    delta = after - before
-
-    sources = list(data.keys())
-
-    print('received {} data sources'.format(len(sources)))
-    print('REQ-REP delay (s):', delta)
-    for source in sources:
-        ts = data[source]['metadata']['timestamp']
-        dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
-        tid = data[source]['metadata']['timestamp.tid']
-        delay = (delta - ts) * 1000
-        print('- {}:'.format(source))
-        print('delay (ms): {:.2f} | timestamp: {} ({}) | tid: {}'.format(delay, dt, ts, tid))
-        # print('  * timestamp: ', ts)
-        # print('  * train id:  ', tid)
-        # print('  * delay (ms):', delay)
-    print()
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
@@ -34,11 +13,18 @@ def main(argv=None):
         description="Monitor data from a Karabo bridge server")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
+    ap.add_argument('-v', '--verbose', action='count', default=0,
+                    help='Select verbosity (-vvv for most verbose)')
+    ap.add_argument('--ntrains', help="Stop after N trains", metavar='N', type=int)
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
     try:
-        while True:
-            monitor(client)
+        if args.ntrains is None:
+            while True:
+                print_one_train(client, verbosity=args.verbose)
+        else:
+            for _ in range(args.ntrains):
+                print_one_train(client, verbosity=args.verbose)
     except KeyboardInterrupt:
         print('\nexit.')
