@@ -41,7 +41,7 @@ def hdf5_to_dict(filepath, group='/'):
     """
     if not h5py.is_hdf5(filepath):
         raise RuntimeError(filepath, 'is not a valid HDF5 file.')
-    
+
     with h5py.File(filepath, 'r') as handler:
         dic = walk_hdf5_to_dict(handler[group])
     return dic
@@ -68,6 +68,7 @@ def walk_hdf5_to_dict(h5):
         else:
             print('what are you?', type(value))
     return dic
+
 
 def print_one_train(client, verbosity=0):
     """Retrieve data for one train and print it.
@@ -118,6 +119,7 @@ def print_one_train(client, verbosity=0):
         print()
 
     return data, meta
+
 
 def pretty_print(d, ind='', verbosity=0):
     """Pretty print a data dictionary from the bridge client

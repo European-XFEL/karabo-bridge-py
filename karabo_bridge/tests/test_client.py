@@ -1,5 +1,6 @@
 from karabo_bridge import Client
 
+
 def test_get_frame(sim_server):
     c = Client(sim_server)
     data, metadata = c.next()

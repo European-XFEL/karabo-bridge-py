@@ -1,6 +1,7 @@
 import argparse
 from karabo_bridge.simulation import start_gen
 
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="karabo-bridge-server-sim",

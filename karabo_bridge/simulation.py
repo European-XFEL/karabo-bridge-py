@@ -13,8 +13,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 from functools import partial
 from os import uname
 import pickle
-from queue import Queue
-from time import sleep, time
+from time import time
 from threading import Thread
 import copy
 
@@ -83,7 +82,7 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
     rand_data = partial(np.random.uniform, low=1500, high=1600,
                         size=detector_info['module_shape'])
     if corrected:
-        data = np.zeros(array_shape, dtype= np.float32)
+        data = np.zeros(array_shape, dtype=np.float32)
     else:
         data = np.zeros(array_shape, dtype=np.uint16)
     for pulse in range(pulse_count):
@@ -142,6 +141,7 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
 
     return gen, meta
 
+
 def generate(detector_info, corrected, nsources):
     tid_counter = 10000000000
     while True:
@@ -150,6 +150,7 @@ def generate(detector_info, corrected, nsources):
                                                 nsources=nsources)
         tid_counter += 1
         yield (data, meta)
+
 
 def containize(train_data, ser, ser_func, vers):
     data, meta = train_data
@@ -251,7 +252,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 socket.send_multipart(msg)
                 if debug:
                     print('Server : emitted train:',
-                        train[1][list(train[1].keys())[0]]['timestamp.tid'])
+                          train[1][list(train[1].keys())[0]]['timestamp.tid'])
             else:
                 print('wrong request')
                 break
@@ -289,7 +290,6 @@ class ServeInThread(Thread):
         self.stopper_r.bind('inproc://sim-server-stop')
         self.stopper_w = self.zmq_context.socket(zmq.PAIR)
         self.stopper_w.connect('inproc://sim-server-stop')
-
 
     def run(self):
         poller = zmq.Poller()

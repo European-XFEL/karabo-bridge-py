@@ -1,5 +1,6 @@
 from karabo_bridge.cli import monitor
 
+
 def test_main(sim_server, capsys):
     monitor.main([sim_server, '--ntrains', '1'])
     out, err = capsys.readouterr()

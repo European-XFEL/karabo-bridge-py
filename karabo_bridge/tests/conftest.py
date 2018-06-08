@@ -3,6 +3,7 @@ import pytest
 
 from karabo_bridge.simulation import ServeInThread
 
+
 @pytest.fixture
 def sim_server():
     with TemporaryDirectory() as td:
