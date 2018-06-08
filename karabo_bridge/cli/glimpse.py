@@ -4,6 +4,7 @@ from datetime import datetime
 import h5py
 import numpy as np
 from socket import gethostname
+from time import localtime, strftime, time
 
 from .. import Client
 
@@ -65,6 +66,43 @@ def walk_hdf5_to_dict(h5):
             print('what are you?', type(value))
     return dic
 
+def print_train_data(data, meta, ts_before, ts_after, verbosity=0):
+    if not data:
+        print("Empty data")
+        return
+
+    train_id = list(meta.values())[0]['timestamp.tid']
+    print("Train ID:", train_id, "--------------------------")
+    delta = ts_after - ts_before
+    print('Data from {} sources, REQ-REP took {:.3f}s'
+          .format(len(data), delta))
+    print()
+
+    for i, (source, src_data) in enumerate(sorted(data.items()), start=1):
+        src_metadata = meta.get(source, {})
+        tid = src_metadata.get('timestamp.tid', 0)
+        print("Source {}: {!r} @ {}".format(i, source, tid))
+        try:
+            ts = src_metadata['timestamp']
+        except KeyError:
+            print("No timestamp")
+        else:
+            dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
+
+            delay = (ts_after - ts) * 1000
+            print('timestamp: {} ({}) | delay (ms): {:.2f}'
+                  .format(dt, ts, delay))
+
+        if verbosity < 1:
+            print("- data:", sorted(src_data))
+            print("- metadata:", sorted(src_metadata))
+        else:
+            print('data:')
+            pretty_print(src_data, verbosity=verbosity - 1)
+            if src_metadata:
+                print('metadata:')
+                pretty_print(src_metadata)
+        print()
 
 def pretty_print(d, ind='', verbosity=0):
     assert isinstance(d, dict)
@@ -102,14 +140,11 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
+    before = time()
     data, meta = client.next()
+    after = time()
 
-    for k, v in data.items():
-        print('\n*** data source: "%s" \ndata:' % k)
-        pretty_print(v, verbosity=args.verbose)
-        if meta[k]:
-            print('metadata:')
-            pretty_print(meta[k])
+    print_train_data(data, meta, before, after, verbosity=args.verbose+1)
 
     if args.save:
         dict_to_hdf5(data, args.endpoint)

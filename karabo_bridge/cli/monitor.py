@@ -3,6 +3,7 @@
 import argparse
 from time import localtime, strftime, time
 
+from .glimpse import print_train_data
 from ..client import Client
 
 
@@ -12,22 +13,7 @@ def monitor(client):
     after = time()
     delta = after - before
 
-    sources = list(data.keys())
-
-    print('received {} data sources'.format(len(sources)))
-    print('REQ-REP delay (s):', delta)
-    for source in sources:
-        src_metadata = metadata[source]
-        ts = src_metadata['timestamp']
-        dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
-        tid = src_metadata['timestamp.tid']
-        delay = (delta - ts) * 1000
-        print('- {}:'.format(source))
-        print('delay (ms): {:.2f} | timestamp: {} ({}) | tid: {}'.format(delay, dt, ts, tid))
-        # print('  * timestamp: ', ts)
-        # print('  * train id:  ', tid)
-        # print('  * delay (ms):', delay)
-    print()
+    print_train_data(data, metadata, before, after, verbosity=0)
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
