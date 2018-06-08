@@ -7,13 +7,12 @@ from .glimpse import print_train_data
 from ..client import Client
 
 
-def monitor(client):    
+def monitor(client, verbosity=0):
     before = time()
     data, metadata = client.next()
     after = time()
-    delta = after - before
 
-    print_train_data(data, metadata, before, after, verbosity=0)
+    print_train_data(data, metadata, before, after, verbosity=verbosity)
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
@@ -21,11 +20,13 @@ def main(argv=None):
         description="Monitor data from a Karabo bridge server")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
+    ap.add_argument('-v', '--verbose', action='count', default=0,
+                    help='Select verbosity (-vvv for most verbose)')
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
     try:
         while True:
-            monitor(client)
+            monitor(client, verbosity=args.verbose)
     except KeyboardInterrupt:
         print('\nexit.')

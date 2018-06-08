@@ -134,9 +134,9 @@ def main(argv=None):
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
     ap.add_argument('-s', '--save', action='store_true',
-                    help='Save the received train data to a HDF5 file.')
+                    help='Save the received train data to a HDF5 file')
     ap.add_argument('-v', '--verbose', action='count', default=0,
-                    help='Select verbosity (-vv for most verbose).')
+                    help='Select verbosity (-vv for most verbose)')
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
