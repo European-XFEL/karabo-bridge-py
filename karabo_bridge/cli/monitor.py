@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Monitor messages coming from Karabo bridge."""
 
 import argparse
 

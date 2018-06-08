@@ -1,3 +1,6 @@
+"""Inspect a single message from Karabo bridge.
+"""
+
 import argparse
 from collections import Sequence
 from datetime import datetime
@@ -117,6 +120,8 @@ def print_one_train(client, verbosity=0):
     return data, meta
 
 def pretty_print(d, ind='', verbosity=0):
+    """Pretty print a data dictionary from the bridge client
+    """
     assert isinstance(d, dict)
     for k, v in sorted(d.items()):
         str_base = '{} - [{}] {}'.format(ind, type(v).__name__, k)
