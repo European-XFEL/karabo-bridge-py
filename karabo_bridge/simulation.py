@@ -143,7 +143,7 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
 
     return gen, meta
 
-def generate(detector_info, corrected, nsources, *, debug=False):
+def generate(detector_info, corrected, nsources):
     tid_counter = 10000000000
     while True:
         data, meta = gen_combined_detector_data(detector_info, tid_counter,
@@ -151,9 +151,6 @@ def generate(detector_info, corrected, nsources, *, debug=False):
                                                 nsources=nsources)
         tid_counter += 1
         yield (data, meta)
-        if debug:
-            print('Server : emitted train:',
-                  meta[list(meta.keys())[0]]['timestamp.tid'])
 
 def containize(train_data, ser, ser_func, vers):
     data, meta = train_data
@@ -207,7 +204,7 @@ def containize(train_data, ser, ser_func, vers):
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              corrected=True, nsources=1):
+              corrected=True, nsources=1, *, debug=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -243,7 +240,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     detector_info = DETECTORS[detector]
     generator = generate(detector_info, corrected, nsources)
 
-    print('Simulated Karabo-bridge server started on:\n tcp://{}:{}'.format(
+    print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
           uname().nodename, port))
 
     try:
@@ -253,6 +250,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 train = next(generator)
                 msg = containize(train, ser, serialize, version)
                 socket.send_multipart(msg)
+                if debug:
+                    print('Server : emitted train:',
+                        train[1][list(train[1].keys())[0]]['timestamp.tid'])
             else:
                 print('wrong request')
                 break
