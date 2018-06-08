@@ -8,7 +8,7 @@ from ..client import Client
 
 def monitor(client):    
     before = time()
-    data = client.next()
+    data, metadata = client.next()
     after = time()
     delta = after - before
 
@@ -17,9 +17,10 @@ def monitor(client):
     print('received {} data sources'.format(len(sources)))
     print('REQ-REP delay (s):', delta)
     for source in sources:
-        ts = data[source]['metadata']['timestamp']
+        src_metadata = metadata[source]
+        ts = src_metadata['timestamp']
         dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
-        tid = data[source]['metadata']['timestamp.tid']
+        tid = src_metadata['timestamp.tid']
         delay = (delta - ts) * 1000
         print('- {}:'.format(source))
         print('delay (ms): {:.2f} | timestamp: {} ({}) | tid: {}'.format(delay, dt, ts, tid))
