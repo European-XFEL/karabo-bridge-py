@@ -1,17 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-from time import time
 
-from .glimpse import print_train_data
+from .glimpse import print_one_train
 from ..client import Client
 
-def monitor(client, verbosity=0):
-    before = time()
-    data, metadata = client.next()
-    after = time()
-
-    print_train_data(data, metadata, before, after, verbosity=verbosity)
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
@@ -28,9 +21,9 @@ def main(argv=None):
     try:
         if args.ntrains is None:
             while True:
-                monitor(client, verbosity=args.verbose)
+                print_one_train(client, verbosity=args.verbose)
         else:
             for _ in range(args.ntrains):
-                monitor(client, verbosity=args.verbose)
+                print_one_train(client, verbosity=args.verbose)
     except KeyboardInterrupt:
         print('\nexit.')

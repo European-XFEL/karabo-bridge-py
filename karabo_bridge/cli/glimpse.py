@@ -66,7 +66,17 @@ def walk_hdf5_to_dict(h5):
             print('what are you?', type(value))
     return dic
 
-def print_train_data(data, meta, ts_before, ts_after, verbosity=0):
+def print_one_train(client, verbosity=0):
+    """Retrieve data for one train and print it.
+
+    Returns the (data, metadata) dicts from the client.
+
+    This is used by the -glimpse and -monitor command line tools.
+    """
+    ts_before = time()
+    data, meta = client.next()
+    ts_after = time()
+
     if not data:
         print("Empty data")
         return
@@ -74,7 +84,7 @@ def print_train_data(data, meta, ts_before, ts_after, verbosity=0):
     train_id = list(meta.values())[0]['timestamp.tid']
     print("Train ID:", train_id, "--------------------------")
     delta = ts_after - ts_before
-    print('Data from {} sources, REQ-REP took {:.3f}s'
+    print('Data from {} sources, REQ-REP took {:.2f} ms'
           .format(len(data), delta))
     print()
 
@@ -90,7 +100,7 @@ def print_train_data(data, meta, ts_before, ts_after, verbosity=0):
             dt = strftime('%Y-%m-%d %H:%M:%S', localtime(ts))
 
             delay = (ts_after - ts) * 1000
-            print('timestamp: {} ({}) | delay (ms): {:.2f}'
+            print('timestamp: {} ({}) | delay: {:.2f} ms'
                   .format(dt, ts, delay))
 
         if verbosity < 1:
@@ -103,6 +113,8 @@ def print_train_data(data, meta, ts_before, ts_after, verbosity=0):
                 print('metadata:')
                 pretty_print(src_metadata)
         print()
+
+    return data, meta
 
 def pretty_print(d, ind='', verbosity=0):
     assert isinstance(d, dict)
@@ -140,11 +152,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
-    before = time()
-    data, meta = client.next()
-    after = time()
-
-    print_train_data(data, meta, before, after, verbosity=args.verbose+1)
+    data, _ = print_one_train(client, verbosity=args.verbose + 1)
 
     if args.save:
         dict_to_hdf5(data, args.endpoint)
