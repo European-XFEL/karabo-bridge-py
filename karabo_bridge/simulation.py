@@ -36,7 +36,7 @@ DETECTORS = {
         'source': 'SPB_DET_AGIPD1M-1/DET/detector',
         'pulses': 64,
         'modules': 16,
-        'module_shape': (512, 128),  # (x, y)
+        'module_shape': (128, 512),  # (x, y)
     },
     'LPD': {
         'source': 'FXE_DET_LPD1M-1/DET/detector',
@@ -63,22 +63,18 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
         'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
-    if corrected and detector_info['source'] == 'SPB_DET_AGIPD1M-1/DET/detector':
-        # Corrected data from AGIPD might halve the number of frames and cut off
-        # the first one.
-        # TODO: Check if this is still true
-        pulse_count = 31
-    else:
-        pulse_count = detector_info['pulses']
-    array_shape = (pulse_count, detector_info['modules']) + detector_info['module_shape']
+    pulse_count = detector_info['pulses']
+    array_shape = tuple((detector_info['modules'], ) +
+                        detector_info['module_shape'] + (pulse_count, ))
 
     # detector random data
     if corrected:
         gain_data = np.zeros(array_shape, dtype=np.uint16)
+        domain = detector_info['source'].partition('/')[0]
         passport = [
-            'SPB_DET_AGIPD1M-1/CAL/THRESHOLDING_Q3M2',
-            'SPB_DET_AGIPD1M-1/CAL/OFFSET_CORR_Q3M2',
-            'SPB_DET_AGIPD1M-1/CAL/RELGAIN_CORR_Q3M2'
+            '%s/CAL/THRESHOLDING_Q1M1' % domain,
+            '%s/CAL/OFFSET_CORR_Q1M1' % domain,
+            '%s/CAL/RELGAIN_CORR_Q1M1' % domain
         ]
 
         gen[source]['image.gain'] = gain_data
@@ -86,10 +82,13 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
 
     rand_data = partial(np.random.uniform, low=1500, high=1600,
                         size=detector_info['module_shape'])
-    data = np.zeros(array_shape, dtype=np.uint16)  # np.float32)
+    if corrected:
+        data = np.zeros(array_shape, dtype= np.float32)
+    else:
+        data = np.zeros(array_shape, dtype=np.uint16)
     for pulse in range(pulse_count):
         for module in range(detector_info['modules']):
-            data[pulse, module, ] = rand_data()
+            data[module, :, :, pulse] = rand_data()
     cellId = np.array([i for i in range(pulse_count)], dtype=np.uint16)
     length = np.ones(pulse_count, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(pulse_count)], dtype=np.uint64)
