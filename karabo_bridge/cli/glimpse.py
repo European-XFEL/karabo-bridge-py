@@ -66,22 +66,25 @@ def walk_hdf5_to_dict(h5):
     return dic
 
 
-def pretty_print(d, ind=''):
+def pretty_print(d, ind='', verbosity=0):
     assert isinstance(d, dict)
     for k, v in sorted(d.items()):
+        str_base = '{} - [{}] {}'.format(ind, type(v).__name__, k)
+
         if isinstance(v, dict):
-            print('{}+ [{}] {}'.format(ind, type(v).__name__, k))
-            pretty_print(v, ind=ind+'  ')
+            print(str_base.replace('-', '+', 1))
+            pretty_print(v, ind=ind+'  ', verbosity=verbosity)
             continue
         elif isinstance(v, np.ndarray):
-            node = '{}- [{}] {}, {}, {}'.format(
-                ind, type(v).__name__, k, v.dtype, v.shape)
+            node = '{}, {}, {}'.format(str_base, v.dtype, v.shape)
+            if verbosity >= 2:
+                node += '\n{}'.format(v)
         elif isinstance(v, (bytes, bytearray, memoryview, Sequence)):
-            strv = str(v)
-            node = '{}- [{}] {}, '.format(ind, type(v).__name__, k)
-            node += strv[:77-len(node)]+'...' if len(strv) > 77-len(node) else strv
+            node = '{}, {}'.format(str_base, v)
+            if verbosity < 1 and len(node) > 80:
+                node = node[:77] + '...'
         else:
-            node = '{}- [{}] {}, {}'.format(ind, type(v).__name__, k, v)
+            node = '{}, {}'.format(str_base, v)
         print(node)
 
 
@@ -94,6 +97,8 @@ def main(argv=None):
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
     ap.add_argument('-s', '--save', action='store_true',
                     help='Save the received train data to a HDF5 file.')
+    ap.add_argument('-v', '--verbose', action='count', default=0,
+                    help='Select verbosity (-vv for most verbose).')
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
@@ -101,7 +106,7 @@ def main(argv=None):
 
     for k, v in data.items():
         print('\n*** data source: "%s" \ndata:' % k)
-        pretty_print(v)
+        pretty_print(v, verbosity=args.verbose)
         if meta[k]:
             print('metadata:')
             pretty_print(meta[k])
