@@ -52,7 +52,7 @@ def walk_dict_to_hdf5(dic, h5):
             h5.create_dataset(key, data=value, dtype=value.dtype)
         elif isinstance(value, (int, float)):
             h5.create_dataset(key, data=value, dtype=type(value))
-        elif isinstance(value, (str, bytes):
+        elif isinstance(value, (str, bytes)):
             dt = h5py.special_dtype(vlen=type(value))
             h5.create_dataset(key, data=value, dtype=dt)
         else:
