@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-from time import localtime, strftime, time
+from time import time
 
 from .glimpse import print_train_data
 from ..client import Client
