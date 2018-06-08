@@ -12,6 +12,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 
 from collections import deque
 from functools import partial
+from os import uname
 import pickle
 from queue import Queue, Empty
 from time import sleep, time
@@ -241,6 +242,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
     detector_info = DETECTORS[detector]
     generator = generate(detector_info, corrected, nsources)
+
+    print('Simulated Karabo-bridge server started on:\n tcp://{}:{}'.format(
+          uname().nodename, port))
 
     try:
         while True:

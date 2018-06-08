@@ -36,11 +36,11 @@ Request data from a karabo bridge server
 
 Use the ``Client`` class from karabo_brige to create a client and the
 ``next`` method to request data from the server.
-The function returns 2 dictionary: "data" holds a train data and "metadata"
-holds the train metadata. Both dictionary are keyed by source name, and the
-values are dictionaries containing parameters name and values for "data" and
-metadata information (source name, timestamp, trainId) for the "metadata".
-Values are all built-in python types, or numpy arrays.
+The function returns 2 dictionaries: the first one holds a train data and the
+second one holds the associated train metadata. Both dictionaries are keyed by
+source name, and the values are dictionaries containing parameters name and
+values for data and metadata information (source name, timestamp, trainId)
+for the "metadata". Values are all built-in python types, or numpy arrays.
 
 .. code-block:: python
 
