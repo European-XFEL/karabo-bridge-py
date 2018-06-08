@@ -84,7 +84,7 @@ def print_one_train(client, verbosity=0):
         print("Empty data")
         return
 
-    train_id = list(meta.values())[0]['timestamp.tid']
+    train_id = list(meta.values())[0].get('timestamp.tid', 0)
     print("Train ID:", train_id, "--------------------------")
     delta = ts_after - ts_before
     print('Data from {} sources, REQ-REP took {:.2f} ms'
