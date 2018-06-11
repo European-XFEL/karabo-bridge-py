@@ -25,7 +25,8 @@ to install the package::
     or
 
     $ git clone https://github.com/European-XFEL/karabo-bridge-py.git
-    python3 -m pip install .
+    $ cd ./karabo-bridge-py
+    $ python3 -m pip install .
 
 How to use
 ----------
@@ -35,26 +36,33 @@ Request data from a karabo bridge server
 
 Use the ``Client`` class from karabo_brige to create a client and the
 ``next`` method to request data from the server.
-The returned value is a dictionary containing all data source available in the
-pipeline. Each source contains a dictionary containing the (flattened)
-key/value pairs for that source's parameters. The values are all built-in python
-types, or numpy arrays.
+The function returns 2 dictionaries: the first one holds a train data and the
+second one holds the associated train metadata. Both dictionaries are keyed by
+source name, and the values are dictionaries containing parameters name and
+values for data and metadata information (source name, timestamp, trainId)
+for the metadata. Values are all built-in python types, or numpy arrays.
 
 .. code-block:: python
 
     >>> from karabo_bridge import Client
     >>> krb_client = Client('tcp://server-host-name:12345')
-    >>> data = krb_client.next()
+    >>> data, metadata = krb_client.next()
     >>> data.keys()
     dict_keys(['source1', 'source2', 'source3'])
     >>> data['source1'].keys()
     dict_keys(['param1', 'param2'])
+    >>> metadata['source1']
+    {'source1': {'source': 'source1',
+      'timestamp': 1528476983.744877,
+      'timestamp.frac': '744877000000000000',
+      'timestamp.sec': '1528476983',
+      'timestamp.tid': 10000000073}}
 
 Use the Simulation server
 +++++++++++++++++++++++++
 
-To start a simulation, call the ``server_sim`` function and provide a port to bind to.
-You can the use the ``Client`` class and connect to it to test the
+To start a simulation, call the ``start_gen`` function and provide a port to
+bind to. You can the use the ``Client`` class and connect to it to test the
 client without the need to use Karabo.
 
 .. code-block:: python

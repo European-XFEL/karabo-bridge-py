@@ -10,11 +10,10 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from collections import deque
 from functools import partial
+from os import uname
 import pickle
-from queue import Queue, Empty
-from time import sleep, time
+from time import time
 from threading import Thread
 import copy
 
@@ -35,18 +34,19 @@ DETECTORS = {
         'source': 'SPB_DET_AGIPD1M-1/DET/detector',
         'pulses': 64,
         'modules': 16,
-        'module_shape': (512, 128),  # (x, y)
+        'module_shape': (128, 512),  # (y, x)
     },
     'LPD': {
         'source': 'FXE_DET_LPD1M-1/DET/detector',
         'pulses': 300,
         'modules': 16,
-        'module_shape': (256, 256),  # (x, y)
+        'module_shape': (256, 256),  # (y, x)
     }
 }
 
 
-def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsources=1):
+def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
+                               nsources=1):
     source = detector_info['source']
     gen = {source: {}}
     meta = {}
@@ -62,22 +62,18 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
         'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
     }
 
-    if corrected and detector_info['source'] == 'SPB_DET_AGIPD1M-1/DET/detector':
-        # Corrected data from AGIPD might halve the number of frames and cut off
-        # the first one.
-        # TODO: Check if this is still true
-        pulse_count = 31
-    else:
-        pulse_count = detector_info['pulses']
-    array_shape = (pulse_count, detector_info['modules']) + detector_info['module_shape']
+    pulse_count = detector_info['pulses']
+    array_shape = tuple((detector_info['modules'], ) +
+                        detector_info['module_shape'] + (pulse_count, ))
 
     # detector random data
     if corrected:
         gain_data = np.zeros(array_shape, dtype=np.uint16)
+        domain = detector_info['source'].partition('/')[0]
         passport = [
-            'SPB_DET_AGIPD1M-1/CAL/THRESHOLDING_Q3M2',
-            'SPB_DET_AGIPD1M-1/CAL/OFFSET_CORR_Q3M2',
-            'SPB_DET_AGIPD1M-1/CAL/RELGAIN_CORR_Q3M2'
+            '%s/CAL/THRESHOLDING_Q1M1' % domain,
+            '%s/CAL/OFFSET_CORR_Q1M1' % domain,
+            '%s/CAL/RELGAIN_CORR_Q1M1' % domain
         ]
 
         gen[source]['image.gain'] = gain_data
@@ -85,10 +81,13 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
 
     rand_data = partial(np.random.uniform, low=1500, high=1600,
                         size=detector_info['module_shape'])
-    data = np.zeros(array_shape, dtype=np.uint16)  # np.float32)
+    if corrected:
+        data = np.zeros(array_shape, dtype=np.float32)
+    else:
+        data = np.zeros(array_shape, dtype=np.uint16)
     for pulse in range(pulse_count):
         for module in range(detector_info['modules']):
-            data[pulse, module, ] = rand_data()
+            data[module, :, :, pulse] = rand_data()
     cellId = np.array([i for i in range(pulse_count)], dtype=np.uint16)
     length = np.ones(pulse_count, dtype=np.uint32) * int(131072)
     pulseId = np.array([i for i in range(pulse_count)], dtype=np.uint64)
@@ -142,7 +141,8 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False, nsou
 
     return gen, meta
 
-def generate(detector_info, corrected, nsources, *, debug=False):
+
+def generate(detector_info, corrected, nsources):
     tid_counter = 10000000000
     while True:
         data, meta = gen_combined_detector_data(detector_info, tid_counter,
@@ -150,9 +150,7 @@ def generate(detector_info, corrected, nsources, *, debug=False):
                                                 nsources=nsources)
         tid_counter += 1
         yield (data, meta)
-        if debug:
-            print('Server : emitted train:',
-                  meta[list(meta.keys())[0]]['timestamp.tid'])
+
 
 def containize(train_data, ser, ser_func, vers):
     data, meta = train_data
@@ -206,7 +204,7 @@ def containize(train_data, ser, ser_func, vers):
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              corrected=True, nsources=1):
+              corrected=True, nsources=1, *, debug=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -242,6 +240,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     detector_info = DETECTORS[detector]
     generator = generate(detector_info, corrected, nsources)
 
+    print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
+          uname().nodename, port))
+
     try:
         while True:
             msg = socket.recv()
@@ -249,6 +250,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 train = next(generator)
                 msg = containize(train, ser, serialize, version)
                 socket.send_multipart(msg)
+                if debug:
+                    print('Server : emitted train:',
+                          train[1][list(train[1].keys())[0]]['timestamp.tid'])
             else:
                 print('wrong request')
                 break
@@ -286,7 +290,6 @@ class ServeInThread(Thread):
         self.stopper_r.bind('inproc://sim-server-stop')
         self.stopper_w = self.zmq_context.socket(zmq.PAIR)
         self.stopper_w.connect('inproc://sim-server-stop')
-
 
     def run(self):
         poller = zmq.Poller()

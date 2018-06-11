@@ -15,7 +15,8 @@ def main(argv=None):
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
     ap.add_argument('-v', '--verbose', action='count', default=0,
                     help='Select verbosity (-vvv for most verbose)')
-    ap.add_argument('--ntrains', help="Stop after N trains", metavar='N', type=int)
+    ap.add_argument('--ntrains', help="Stop after N trains", metavar='N',
+                    type=int)
     args = ap.parse_args(argv)
 
     client = Client(args.endpoint)
