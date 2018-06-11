@@ -48,12 +48,17 @@ def hdf5_to_dict(filepath, group='/'):
 
 
 def walk_dict_to_hdf5(dic, h5):
-    for key, value in dic.items():
+    for key, value in sorted(dic.items()):
         if isinstance(value, dict):
             group = h5.create_group(key)
             walk_dict_to_hdf5(value, group)
         elif isinstance(value, (np.ndarray)):
             h5.create_dataset(key, data=value, dtype=value.dtype)
+        elif isinstance(value, (int, float)):
+            h5.create_dataset(key, data=value, dtype=type(value))
+        elif isinstance(value, (str, bytes)):
+            dt = h5py.special_dtype(vlen=type(value))
+            h5.create_dataset(key, data=value, dtype=dt)
         else:
             print('not supported', type(value))
 
