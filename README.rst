@@ -20,7 +20,7 @@ Installing
 
 to install the package::
 
-    $ python3 -m pip install git+https://github.com/European-XFEL/karabo-bridge-py.git#egg=karabo-bridge-py
+    $ python3 -m pip install karabo-bridge
 
     or
 
@@ -69,12 +69,11 @@ client without the need to use Karabo.
 
     >>> from karabo_bridge import start_gen
     >>> start_gen(1234)
-    Server : buffered train: 15202746822
-    Server : buffered train: 15202746823
-    Server : buffered train: 15202746824
-    Server : buffered train: 15202746825
-    Server : buffered train: 15202746826
-    Server : buffered train: 15202746827
+    Server : emitted train: 10000000000
+    Server : emitted train: 10000000001
+    Server : emitted train: 10000000002
+    Server : emitted train: 10000000003
+    Server : emitted train: 10000000004
     ...
 
 
