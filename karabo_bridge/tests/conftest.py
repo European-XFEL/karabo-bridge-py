@@ -10,3 +10,19 @@ def sim_server():
         endpoint = "ipc://{}/server".format(td)
         with ServeInThread(endpoint):
             yield endpoint
+
+
+@pytest.fixture
+def sim_server_pickle():
+    with TemporaryDirectory() as td:
+        endpoint = "ipc://{}/server".format(td)
+        with ServeInThread(endpoint, ser='pickle'):
+            yield endpoint
+
+
+@pytest.fixture
+def sim_server_version_1():
+    with TemporaryDirectory() as td:
+        endpoint = "ipc://{}/server".format(td)
+        with ServeInThread(endpoint, protocol_version='1.0'):
+            yield endpoint
