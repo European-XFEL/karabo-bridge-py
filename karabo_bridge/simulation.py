@@ -134,7 +134,7 @@ def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
             src = source + "-" + str(i+1)
             gen[src] = copy.deepcopy(gen[source])
             meta[src] = copy.deepcopy(meta[source])
-            meta[src]['source'] = copy.copy(src)
+            meta[src]['source'] = src
 
         del gen[source]
         del meta[source]
