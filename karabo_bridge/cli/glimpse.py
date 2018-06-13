@@ -19,10 +19,11 @@ def gen_filename(endpoint):
         hostname_port_YearMonthDay_HourMinSecFrac.h5
     """
     now = datetime.now().strftime('%Y%m%d_%H%M%S%f')[:-4]
-    _, host, port = endpoint.replace('/', '').split(':')
-    if host == 'localhost':
-        host = gethostname().split('.')[0]
-    return '{}_{}_{}.h5'.format(host, port, now)
+    base = endpoint.split('://', 1)[1]
+    if base.startswith('localhost:'):
+        base = gethostname().split('.')[0] + base[9:]
+    base = base.replace(':', '_').replace('/', '_')
+    return '{}_{}.h5'.format(base, now)
 
 
 def dict_to_hdf5(dic, endpoint):

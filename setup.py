@@ -42,6 +42,7 @@ setup(name="karabo_bridge",
               'pytest',
               'pytest-cov',
               'h5py',
+              'testpath',
           ]
       },
       packages=find_packages(),
