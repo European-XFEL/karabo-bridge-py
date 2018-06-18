@@ -234,6 +234,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         serialize = partial(msgpack.dumps, use_bin_type=True)
     elif ser == 'pickle':
         serialize = pickle.dumps
+        ser = 'pickle.DEFAULT_PROTOCOL'
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
 
@@ -274,6 +275,7 @@ class ServeInThread(Thread):
             self.serialize = partial(msgpack.dumps, use_bin_type=True)
         elif ser == 'pickle':
             self.serialize = pickle.dumps
+            self.serialization_fmt = 'pickle.DEFAULT_PROTOCOL'
         else:
             raise ValueError("Unknown serialisation format %s" % ser)
 
