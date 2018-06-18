@@ -142,7 +142,11 @@ def pretty_print(d, ind='', verbosity=0):
             node = '{}, {}, {}'.format(str_base, v.dtype, v.shape)
             if verbosity >= 2:
                 node += '\n{}'.format(v)
-        elif isinstance(v, (bytes, bytearray, memoryview, Sequence)):
+        elif isinstance(v, Sequence):
+            if v and isinstance(v, (list, tuple)):
+                itemtype = ' of ' + type(v[0]).__name__
+                pos = str_base.find(']')
+                str_base = str_base[:pos] + itemtype + str_base[pos:]
             node = '{}, {}'.format(str_base, v)
             if verbosity < 1 and len(node) > 80:
                 node = node[:77] + '...'
