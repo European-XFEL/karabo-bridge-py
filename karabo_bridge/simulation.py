@@ -10,6 +10,7 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
+from enum import Enum
 from functools import partial
 from os import uname
 import pickle
@@ -29,125 +30,152 @@ __all__ = ['start_gen']
 msgpack_numpy.patch()
 
 
-DETECTORS = {
-    'AGIPD': {
-        'source': 'SPB_DET_AGIPD1M-1/DET/detector',
-        'pulses': 64,
-        'modules': 16,
-        'module_shape': (128, 512),  # (y, x)
-    },
-    'LPD': {
-        'source': 'FXE_DET_LPD1M-1/DET/detector',
-        'pulses': 300,
-        'modules': 16,
-        'module_shape': (256, 256),  # (y, x)
-    }
-}
+class Detector:
+    # Overridden in subclasses
+    pulses = 0
+    modules = 0
+    mod_x = 0
+    mod_y = 0
+    const_fields = {}
 
+    @staticmethod
+    def getDetector(detector, corr=True, gen='random'):
+        if detector == 'AGIPD':
+            source = 'SPB_DET_AGIPD1M-1/DET/detector'
+            return AGIPD(source, corr=corr, gen=gen)
+        elif detector == 'LPD':
+            source = 'FXE_DET_LPD1M-1/DET/detector'
+            return LPD(source, corr=corr, gen=gen)
+        else:
+            raise NotImplementedError('detector %r not available' % detector)
 
-def gen_combined_detector_data(detector_info, tid_counter, corrected=False,
-                               nsources=1):
-    source = detector_info['source']
-    gen = {source: {}}
-    meta = {}
+    def __init__(self, source='', corr=False, gen='random'):
+        self.source = source or 'INST_DET_GENERIC/DET/detector'
+        self.corrected = corr
+        if gen == 'random':
+            self.genfunc = self.random
+        elif gen == 'zeros':
+            self.genfunc = self.zeros
+        else:
+            raise NotImplementedError('gen func %r not implemented' % gen)
 
-    # metadata
-    ts = time()
-    sec, frac = str(ts).split('.')
-    meta[source] = {
-        'source': source,
-        'timestamp': ts,
-        'timestamp.tid': tid_counter,
-        'timestamp.sec': sec,
-        'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
-    }
+    def data_shape(self):
+        return (self.modules, self.mod_y, self.mod_x, self.pulses)
+    
+    def data_type(self):
+        return np.float32 if self.corrected else np.uint16
 
-    pulse_count = detector_info['pulses']
-    array_shape = tuple((detector_info['modules'], ) +
-                        detector_info['module_shape'] + (pulse_count, ))
-
-    # detector random data
-    if corrected:
-        gain_data = np.zeros(array_shape, dtype=np.uint16)
-        domain = detector_info['source'].partition('/')[0]
+    def corr_passport(self):
+        domain = self.source.partition('/')[0]
         passport = [
             '%s/CAL/THRESHOLDING_Q1M1' % domain,
             '%s/CAL/OFFSET_CORR_Q1M1' % domain,
             '%s/CAL/RELGAIN_CORR_Q1M1' % domain
         ]
+        return passport
 
-        gen[source]['image.gain'] = gain_data
-        gen[source]['image.passport'] = passport
+    def random(self):
+        return np.random.uniform(low=1500, high=1600,
+                                 size=self.data_shape).astype(self.data_type)
+    
+    def zeros(self):
+        return np.zeros(self.data_shape, dtype=self.data_type)
+    
+    def gen_metadata(self, timestamp, trainId):
+        sec, frac = str(timestamp).split('.')
+        meta = {}
+        meta[self.source] = {
+            'source': self.source,
+            'timestamp': timestamp,
+            'timestamp.tid': trainId,
+            'timestamp.sec': sec,
+            'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+        }
+        return meta
 
-    rand_data = partial(np.random.uniform, low=1500, high=1600,
-                        size=detector_info['module_shape'])
-    if corrected:
-        data = np.zeros(array_shape, dtype=np.float32)
-    else:
-        data = np.zeros(array_shape, dtype=np.uint16)
-    for pulse in range(pulse_count):
-        for module in range(detector_info['modules']):
-            data[module, :, :, pulse] = rand_data()
-    cellId = np.array([i for i in range(pulse_count)], dtype=np.uint16)
-    length = np.ones(pulse_count, dtype=np.uint32) * int(131072)
-    pulseId = np.array([i for i in range(pulse_count)], dtype=np.uint64)
-    trainId = np.ones(pulse_count, dtype=np.uint64) * int(tid_counter)
-    status = np.zeros(pulse_count, dtype=np.uint16)
+    def gen_data(self, trainId):
+        data = dict(self.const_fields)
 
-    gen[source]['image.data'] = data
-    gen[source]['image.cellId'] = cellId
-    gen[source]['image.length'] = length
-    gen[source]['image.pulseId'] = pulseId
-    gen[source]['image.trainId'] = trainId
-    gen[source]['image.status'] = status
+        timestamp = time()        
+        img = self.genfunc()
+        base_src = '/'.join((self.source.rpartition('/')[0], '{}CH0:xtdf'))
+        sources = [base_src.format(i) for i in range(16)]
 
-    checksum = bytes(np.ones(16, dtype=np.int8))
-    magicNumberEnd = bytes(np.ones(8, dtype=np.int8))
-    status = 0
+        data['__intime'] = timestamp
+        # TODO: cellId differ between AGIPD/LPD
+        data['cellId'] = np.arange(self.pulses, dtype=np.uint16)
+        data['combinedFrom'] = sources
+        data['image.data'] = img
+        data['length'] = np.full((self.pulses, 1), img.nbytes, dtype=np.uint32)
+        data['modulesPresents'] = [True for i in range(self.modules)]
+        if self.corrected:
+            data['image.gain'] = np.zeros(self.data_shape, dtype=np.uint16)
+            data['passport'] = self.corr_passport()
+        data['pulseCount'] = self.pulses
+        # TODO: pulseId differ between AGIPD/LPD
+        data['pulseId'] = np.arange(self.pulses, dtype=np.uint16)
+        data['sources'] = sources
+        data['trainId'] = trainId
 
-    gen[source]['trailer.checksum'] = checksum
-    gen[source]['trailer.magicNumberEnd'] = magicNumberEnd
-    gen[source]['trailer.status'] = status
-
-    data = bytes(np.ones(416, dtype=np.uint8))
-
-    gen[source]['detector.data'] = data
-
-    dataId = 0
-    linkId = np.iinfo(np.uint64).max
-    magicNumberBegin = bytes(np.ones(8, dtype=np.int8))
-    majorTrainFormatVersion = 2
-    minorTrainFormatVersion = 1
-    reserved = bytes(np.ones(16, dtype=np.uint8))
-
-    gen[source]['header.dataId'] = dataId
-    gen[source]['header.linkId'] = linkId
-    gen[source]['header.magicNumberBegin'] = magicNumberBegin
-    gen[source]['header.majorTrainFormatVersion'] = majorTrainFormatVersion
-    gen[source]['header.minorTrainFormatVersion'] = minorTrainFormatVersion
-    gen[source]['header.pulseCount'] = pulse_count
-    gen[source]['header.reserved'] = reserved
-    gen[source]['header.trainId'] = tid_counter
-
-    if nsources > 1:
-        for i in range(nsources):
-            src = source + "-" + str(i+1)
-            gen[src] = copy.deepcopy(gen[source])
-            meta[src] = copy.deepcopy(meta[source])
-            meta[src]['source'] = src
-
-        del gen[source]
-        del meta[source]
-
-    return gen, meta
+        meta = self.gen_metadata(timestamp, trainId)
+        return {self.source: data}, meta
 
 
-def generate(detector_info, corrected, nsources):
+class AGIPD(Detector):
+    pulses = 64
+    modules = 16
+    mod_y = 128
+    mod_x = 512
+
+    const_fields = {
+        'checksum': b'\x00'*16,
+        'data': b'\x01'*416,
+        'dataId': 0,
+        'linkId': 18446744069414584335,
+        'magicNumberBegin': b'\xce\xfa\xef\xbeFDTX',
+        'magicNumberEnd': b'\xcd\xab\xad\xdeFDTX',
+        'majorTrainFormatVersion': 2,
+        'minorTrainFormatVersion': 1,
+        'reserved': b'\x00'*16,
+        'status': 0,
+    }
+
+
+class LPD(Detector):
+    pulses = 300
+    modules = 16
+    mod_y = 256
+    mod_x = 256
+
+    const_fields = {
+        'checksum': b'\x11'*16,
+        'data': b'\xff'*416,
+        'dataId': 0,
+        'linkId': 18446744069414584320,
+        'magicNumberBegin': b'\xce\xfa\xef\xbeFDTX',
+        'magicNumberEnd': b'\xcd\xab\xad\xdeFDTX',
+        'majorTrainFormatVersion': 2,
+        'minorTrainFormatVersion': 1,
+        'reserved': b'\x00'*16,
+        'status': 0,
+    }
+
+
+def generate(detector, nsources):
     tid_counter = 10000000000
     while True:
-        data, meta = gen_combined_detector_data(detector_info, tid_counter,
-                                                corrected=corrected,
-                                                nsources=nsources)
+        data, meta = detector.gen_data(tid_counter)
+
+        if nsources > 1:
+            source = detector.source
+            for i in range(nsources):
+                src = source + "-" + str(i+1)
+                data[src] = copy.deepcopy(data[source])
+                meta[src] = copy.deepcopy(meta[source])
+                meta[src]['source'] = src
+            del data[source]
+            del meta[source]
+
         tid_counter += 1
         yield (data, meta)
 
@@ -204,7 +232,7 @@ def containize(train_data, ser, ser_func, vers):
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              corrected=True, nsources=1, *, debug=True):
+              corrected=True, nsources=1, datagen='random', *, debug=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -224,6 +252,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         Generate corrected data output if True, else RAW. Default is True.
     nsources: int, optional
         Number of sources.
+    datagen: string, optional
+        Generator function used to generate detector data. Default is random.
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -238,8 +268,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
 
-    detector_info = DETECTORS[detector]
-    generator = generate(detector_info, corrected, nsources)
+    det = Detector.getDetector(detector, corr=corrected, gen=datagen)
+    generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
           uname().nodename, port))
@@ -266,7 +296,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
 class ServeInThread(Thread):
     def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
-                 detector='AGIPD', corrected=True, nsources=1):
+                 detector='AGIPD', corrected=True, nsources=1,
+                 datagen='random'):
         super().__init__()
         self.protocol_version = protocol_version
 
@@ -279,9 +310,8 @@ class ServeInThread(Thread):
         else:
             raise ValueError("Unknown serialisation format %s" % ser)
 
-        detector_info = DETECTORS[detector]
-
-        self.generator = generate(detector_info, corrected, nsources)
+        det = Detector.getDetector(detector, corr=corrected, gen=datagen)
+        self.generator = generate(det, nsources)
 
         self.zmq_context = zmq.Context()
         self.server_socket = self.zmq_context.socket(zmq.REP)
