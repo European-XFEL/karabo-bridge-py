@@ -76,10 +76,10 @@ class Detector:
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,
-                                 size=self.data_shape).astype(self.data_type)
+                                 size=self.data_shape()).astype(self.data_type())
     
     def zeros(self):
-        return np.zeros(self.data_shape, dtype=self.data_type)
+        return np.zeros(self.data_shape(), dtype=self.data_type())
     
     def gen_metadata(self, timestamp, trainId):
         sec, frac = str(timestamp).split('.')
@@ -109,7 +109,7 @@ class Detector:
         data['length'] = np.full((self.pulses, 1), img.nbytes, dtype=np.uint32)
         data['modulesPresents'] = [True for i in range(self.modules)]
         if self.corrected:
-            data['image.gain'] = np.zeros(self.data_shape, dtype=np.uint16)
+            data['image.gain'] = np.zeros(self.data_shape(), dtype=np.uint16)
             data['passport'] = self.corr_passport()
         data['pulseCount'] = self.pulses
         # TODO: pulseId differ between AGIPD/LPD
