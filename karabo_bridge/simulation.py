@@ -10,7 +10,6 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from enum import Enum
 from functools import partial
 from os import uname
 import pickle
@@ -32,19 +31,21 @@ msgpack_numpy.patch()
 
 class Detector:
     # Overridden in subclasses
-    pulses = 0
-    modules = 0
-    mod_x = 0
-    mod_y = 0
+    pulses = 0  # nimages per XRAY train
+    modules = 0  # nb of super modules composing the detector
+    mod_x = 0  # pixel count (y axis) of a single super module
+    mod_y = 0  # pixel count (x axis) of a single super module
+    pixel_size = 0  # [mm]
+    layout = np.array([[]])  # super module layout of the detector
     const_fields = {}
 
     @staticmethod
-    def getDetector(detector, corr=True, gen='random'):
+    def getDetector(detector, source='', corr=True, gen='random'):
         if detector == 'AGIPD':
-            source = 'SPB_DET_AGIPD1M-1/DET/detector'
+            source = source or 'SPB_DET_AGIPD1M-1/DET/detector'
             return AGIPD(source, corr=corr, gen=gen)
         elif detector == 'LPD':
-            source = 'FXE_DET_LPD1M-1/DET/detector'
+            source = source or 'FXE_DET_LPD1M-1/DET/detector'
             return LPD(source, corr=corr, gen=gen)
         else:
             raise NotImplementedError('detector %r not available' % detector)
@@ -56,13 +57,15 @@ class Detector:
             self.genfunc = self.random
         elif gen == 'zeros':
             self.genfunc = self.zeros
+        elif gen == 'rings':
+            self.genfunc = self.lithium_rings
         else:
             raise NotImplementedError('gen func %r not implemented' % gen)
 
     @property
     def data_shape(self):
         return (self.modules, self.mod_y, self.mod_x, self.pulses)
-    
+
     @property
     def data_type(self):
         return np.float32 if self.corrected else np.uint16
@@ -79,15 +82,21 @@ class Detector:
     def random(self):
         return np.random.uniform(low=1500, high=1600,
                                  size=self.data_shape).astype(self.data_type)
-    
+
     def zeros(self):
         return np.zeros(self.data_shape, dtype=self.data_type)
-    
-    def gen_metadata(self, timestamp, trainId):
+
+    def module_position(self, ix):
+        y, x = np.where(self.layout == ix)
+        assert len(y) == len(x) == 1
+        return x[0], y[0]
+
+    @staticmethod
+    def gen_metadata(source, timestamp, trainId):
         sec, frac = str(timestamp).split('.')
         meta = {}
-        meta[self.source] = {
-            'source': self.source,
+        meta[source] = {
+            'source': source,
             'timestamp': timestamp,
             'timestamp.tid': trainId,
             'timestamp.sec': sec,
@@ -98,7 +107,7 @@ class Detector:
     def gen_data(self, trainId):
         data = dict(self.const_fields)
 
-        timestamp = time()        
+        timestamp = time()
         img = self.genfunc()
         base_src = '/'.join((self.source.rpartition('/')[0], '{}CH0:xtdf'))
         sources = [base_src.format(i) for i in range(16)]
@@ -119,7 +128,7 @@ class Detector:
         data['sources'] = sources
         data['trainId'] = trainId
 
-        meta = self.gen_metadata(timestamp, trainId)
+        meta = self.gen_metadata(self.source, timestamp, trainId)
         return {self.source: data}, meta
 
 
@@ -128,6 +137,18 @@ class AGIPD(Detector):
     modules = 16
     mod_y = 128
     mod_x = 512
+    pixel_size = 0.2
+    distance = 2000
+    layout = np.array([
+        [12, 0],
+        [13, 1],
+        [14, 2],
+        [15, 3],
+        [8, 4],
+        [9, 5],
+        [10, 6],
+        [11, 7],
+    ])
 
     const_fields = {
         'checksum': b'\x00'*16,
@@ -148,6 +169,13 @@ class LPD(Detector):
     modules = 16
     mod_y = 256
     mod_x = 256
+    pixel_size = 0.5
+    layout = np.array([
+        [15, 12, 3, 0],
+        [14, 13, 2, 1],
+        [11, 8, 7, 4],
+        [10, 9, 6, 5],
+    ])
 
     const_fields = {
         'checksum': b'\x11'*16,

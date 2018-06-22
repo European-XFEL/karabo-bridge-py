@@ -51,6 +51,7 @@ def hdf5_to_dict(filepath, group='/'):
 vlen_bytes = h5py.special_dtype(vlen=bytes)
 vlen_str = h5py.special_dtype(vlen=str)
 
+
 def walk_dict_to_hdf5(dic, h5):
     for key, value in sorted(dic.items()):
         if isinstance(value, dict):
