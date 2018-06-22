@@ -58,8 +58,6 @@ class Detector:
             self.genfunc = self.random
         elif gen == 'zeros':
             self.genfunc = self.zeros
-        elif gen == 'rings':
-            self.genfunc = self.lithium_rings
         else:
             raise NotImplementedError('gen func %r not implemented' % gen)
 
