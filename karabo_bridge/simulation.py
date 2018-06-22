@@ -36,6 +36,7 @@ class Detector:
     mod_x = 0  # pixel count (y axis) of a single super module
     mod_y = 0  # pixel count (x axis) of a single super module
     pixel_size = 0  # [mm]
+    distance = 0  # Sample to detector distance [mm]
     layout = np.array([[]])  # super module layout of the detector
     const_fields = {}
 
@@ -170,6 +171,7 @@ class LPD(Detector):
     mod_y = 256
     mod_x = 256
     pixel_size = 0.5
+    distance = 275
     layout = np.array([
         [15, 12, 3, 0],
         [14, 13, 2, 1],
