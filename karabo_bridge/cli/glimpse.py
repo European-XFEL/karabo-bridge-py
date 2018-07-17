@@ -48,6 +48,10 @@ def hdf5_to_dict(filepath, group='/'):
     return dic
 
 
+vlen_bytes = h5py.special_dtype(vlen=bytes)
+vlen_str = h5py.special_dtype(vlen=str)
+
+
 def walk_dict_to_hdf5(dic, h5):
     for key, value in sorted(dic.items()):
         if isinstance(value, dict):
@@ -57,9 +61,18 @@ def walk_dict_to_hdf5(dic, h5):
             h5.create_dataset(key, data=value, dtype=value.dtype)
         elif isinstance(value, (int, float)):
             h5.create_dataset(key, data=value, dtype=type(value))
-        elif isinstance(value, (str, bytes)):
-            dt = h5py.special_dtype(vlen=type(value))
-            h5.create_dataset(key, data=value, dtype=dt)
+        elif isinstance(value, str):
+            # VLEN strings do not support embedded NULLs
+            value = value.replace('\x00', '')
+            ds = h5.create_dataset(key, shape=(len(value), ),
+                                   dtype=vlen_str, maxshape=(None, ))
+            ds[:len(value)] = value
+        elif isinstance(value, bytes):
+            # VLEN strings do not support embedded NULLs
+            value = value.replace(b'\x00', b'')
+            ds = h5.create_dataset(key, shape=(len(value), ),
+                                   dtype=vlen_bytes, maxshape=(None, ))
+            ds[:len(value)] = value
         else:
             print('not supported', type(value))
 
