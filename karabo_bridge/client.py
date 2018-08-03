@@ -93,12 +93,12 @@ class Client:
         """
         if self._pattern == zmq.REQ:
             self._socket.send(b'next')
-        msg = self._socket.recv_multipart()
+        msg = self._socket.recv_multipart(copy=False)
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
         if len(msg) < 2:  # protocol version 1.0
-            data = self._deserializer(msg[-1])
+            data = self._deserializer(msg[-1].bytes)
             meta = {}
             for key, value in data.items():
                 meta[key] = value.get('metadata', {})
@@ -107,20 +107,19 @@ class Client:
         data = {}
         meta = {}
         for header, payload in zip(*[iter(msg)]*2):
-            md = self._deserializer(header)
+            md = self._deserializer(header.bytes)
             source = md['source']
             content = md['content']
 
             if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
                            'pickle.DEFAULT_PROTOCOL'):
-                data[source] = self._deserializer(payload)
+                data[source] = self._deserializer(payload.bytes)
                 meta[source] = md.get('metadata', {})
             elif content in ('array', 'ImageData'):
                 dtype = md['dtype']
                 shape = md['shape']
 
-                buf = memoryview(payload)
-                array = np.frombuffer(buf, dtype=dtype).reshape(shape)
+                array = np.frombuffer(payload.buffer, dtype=dtype).reshape(shape)
 
                 if content == 'array':
                     data[source].update({md['path']: array})
