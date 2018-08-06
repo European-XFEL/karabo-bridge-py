@@ -45,6 +45,9 @@ class Detector:
         if detector == 'AGIPD':
             source = source or 'SPB_DET_AGIPD1M-1/DET/detector'
             return AGIPD(source, corr=corr, gen=gen)
+        elif detector == 'AGIPDModule':
+            source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
+            return AGIPDModule(source, corr=corr, gen=gen)
         elif detector == 'LPD':
             source = source or 'FXE_DET_LPD1M-1/DET/detector'
             return LPD(source, corr=corr, gen=gen)
@@ -131,9 +134,9 @@ class Detector:
         return {self.source: data}, meta
 
 
-class AGIPD(Detector):
+class AGIPDModule(Detector):
     pulses = 64
-    modules = 16
+    modules = 1
     mod_y = 128
     mod_x = 512
     pixel_size = 0.2
@@ -162,6 +165,8 @@ class AGIPD(Detector):
         'status': 0,
     }
 
+class AGIPD(AGIPDModule):
+    modules = 16
 
 class LPD(Detector):
     pulses = 300

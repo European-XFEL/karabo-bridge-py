@@ -11,7 +11,7 @@ def main(argv=None):
         'port', help="TCP port the server will bind"
     )
     ap.add_argument(
-        '-d', '--detector', default='AGIPD', choices=['AGIPD', 'LPD'],
+        '-d', '--detector', default='AGIPD', choices=['AGIPD', 'AGIPDModule', 'LPD'],
         help="Which kind of detector to simulate (default: AGIPD)"
     )
     ap.add_argument(
