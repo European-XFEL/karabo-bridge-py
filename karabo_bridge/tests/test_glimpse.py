@@ -9,7 +9,7 @@ from karabo_bridge.cli import glimpse
 def test_main(sim_server, capsys):
     glimpse.main([sim_server])
     out, err = capsys.readouterr()
-    assert 'SPB_DET_AGIPD1M-1/DET/detector' in out
+    assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in out
 
 
 def test_save(sim_server):
@@ -20,5 +20,5 @@ def test_save(sim_server):
         assert len(files) == 1
         path = os.path.join(td, files[0])
         with h5py.File(path, 'r') as f:
-            trainId = f['SPB_DET_AGIPD1M-1/DET/detector/trainId'].value
+            trainId = f['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf/trainId'].value
             assert trainId == 10000000000

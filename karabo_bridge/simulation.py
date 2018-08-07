@@ -45,6 +45,9 @@ class Detector:
         if detector == 'AGIPD':
             source = source or 'SPB_DET_AGIPD1M-1/DET/detector'
             return AGIPD(source, corr=corr, gen=gen)
+        elif detector == 'AGIPDModule':
+            source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
+            return AGIPDModule(source, corr=corr, gen=gen)
         elif detector == 'LPD':
             source = source or 'FXE_DET_LPD1M-1/DET/detector'
             return LPD(source, corr=corr, gen=gen)
@@ -131,9 +134,9 @@ class Detector:
         return {self.source: data}, meta
 
 
-class AGIPD(Detector):
+class AGIPDModule(Detector):
     pulses = 64
-    modules = 16
+    modules = 1
     mod_y = 128
     mod_x = 512
     pixel_size = 0.2
@@ -162,6 +165,8 @@ class AGIPD(Detector):
         'status': 0,
     }
 
+class AGIPD(AGIPDModule):
+    modules = 16
 
 class LPD(Detector):
     pulses = 300
@@ -310,7 +315,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
             if msg == b'next':
                 train = next(generator)
                 msg = containize(train, ser, serialize, version)
-                socket.send_multipart(msg)
+                socket.send_multipart(msg, copy=False)
                 if debug:
                     print('Server : emitted train:',
                           train[1][list(train[1].keys())[0]]['timestamp.tid'])
@@ -365,7 +370,7 @@ class ServeInThread(Thread):
                     train = next(self.generator)
                     msg = containize(train, self.serialization_fmt,
                                      self.serialize, self.protocol_version)
-                    self.server_socket.send_multipart(msg)
+                    self.server_socket.send_multipart(msg, copy=False)
                 else:
                     print('Unrecognised request:', msg)
             elif self.stopper_r in events:
