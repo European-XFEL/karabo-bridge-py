@@ -36,6 +36,10 @@ def main(argv=None):
         '-g', '--gen', default='random', choices=['random', 'zeros'],
         help='Generator function to generate simulated detector data'
     )
+    ap.add_argument(
+        '--debug', action='store_true',
+        help='More verbose terminal logging'
+    )
     args = ap.parse_args(argv)
     start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.corrected, args.nsources, args.gen)
+              args.corrected, args.nsources, args.gen, debug=args.debug)

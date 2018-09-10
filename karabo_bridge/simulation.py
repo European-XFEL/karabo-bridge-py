@@ -265,6 +265,7 @@ def containize(train_data, ser, ser_func, vers):
 
     return msg
 
+TIMING_INTERVAL = 50
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
               corrected=True, nsources=1, datagen='random', *, debug=True):
@@ -309,6 +310,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
           uname().nodename, port))
 
+    t_prev = time()
+    n = 0
+
     try:
         while True:
             msg = socket.recv()
@@ -319,6 +323,13 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 if debug:
                     print('Server : emitted train:',
                           train[1][list(train[1].keys())[0]]['timestamp.tid'])
+                n += 1
+                if n % TIMING_INTERVAL == 0:
+                    t_now = time()
+                    print("Sent {} trains in {:.2f} seconds ({:.2f} Hz)".format(
+                        TIMING_INTERVAL, t_now - t_prev, TIMING_INTERVAL / (t_now - t_prev)
+                    ))
+                    t_prev = t_now
             else:
                 print('wrong request')
                 break
