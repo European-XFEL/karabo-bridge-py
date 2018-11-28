@@ -40,6 +40,8 @@ class Client:
     ser : str, optional
         Serialization protocol to use to decode the incoming message (default
         is msgpack) - supported: msgpack,pickle.
+    timeout : int
+        Timeout on :method:`next` (in milliseconds)
 
     Raises
     ------
@@ -48,7 +50,7 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack'):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None):
 
         self._context = zmq.Context()
         self._socket = None
@@ -65,6 +67,10 @@ class Client:
             self._socket.connect(endpoint)
         else:
             raise NotImplementedError('socket is not supported:', str(sock))
+
+        if timeout is not None:
+            self._socket.setsockopt(zmq.RECVTIMEO, timeout)
+        self._recv_ready = False
 
         self._pattern = self._socket.TYPE
 
@@ -90,10 +96,20 @@ class Client:
             This dictionary is populated for protocol version 1.0 and 2.2.
             For other protocol versions, metadata information is available in
             `data` dict.
+
+        Raises
+        ------
+        TimeoutError
+            If timeout is reached before receiving data.
         """
-        if self._pattern == zmq.REQ:
+        if self._pattern == zmq.REQ and not self._recv_ready:
             self._socket.send(b'next')
-        msg = self._socket.recv_multipart(copy=False)
+            self._recv_ready = True
+        try:
+            msg = self._socket.recv_multipart(copy=False)
+        except zmq.error.Again:
+            raise TimeoutError()
+        self._recv_ready = False
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
