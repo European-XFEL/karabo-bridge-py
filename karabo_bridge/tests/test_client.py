@@ -50,9 +50,9 @@ def test_iterator(sim_server):
         assert trainId == 10000000000 + i
 
 
-def test_timeout(sim_server):
-        no_server = 'ipc://nodata'
-        c = Client(no_server, timeout=200)
+def test_timeout():
+    no_server = 'ipc://nodata'
+    with Client(no_server, timeout=200) as c:
         with pytest.raises(TimeoutError) as info:
-                tid, data = c.next()
-        assert 'No data received from ipc://nodata in the last 200 ms'
+            tid, data = c.next()
+    assert 'No data received from ipc://nodata in the last 200 ms' in str(info.value)
