@@ -69,7 +69,7 @@ class Client:
             raise NotImplementedError('socket is not supported:', str(sock))
 
         if timeout is not None:
-            self._socket.setsockopt(zmq.RECVTIMEO, timeout)
+            self._socket.setsockopt(zmq.RCVTIMEO, timeout)
         self._recv_ready = False
 
         self._pattern = self._socket.TYPE
@@ -108,7 +108,10 @@ class Client:
         try:
             msg = self._socket.recv_multipart(copy=False)
         except zmq.error.Again:
-            raise TimeoutError()
+            raise TimeoutError(
+                'No data received from {} in the last {} ms'.format(
+                self._socket.getsockopt(zmq.LAST_ENDPOINT),
+                self._socket.getsockopt(zmq.RCVTIMEO)))
         self._recv_ready = False
         return self._deserialize(msg)
 
