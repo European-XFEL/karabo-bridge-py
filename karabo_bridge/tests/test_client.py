@@ -48,3 +48,11 @@ def test_iterator(sim_server):
     for i, (data, metadata) in enumerate(islice(c, 3)):
         trainId = metadata['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf']['timestamp.tid']
         assert trainId == 10000000000 + i
+
+
+def test_timeout(sim_server):
+        no_server = 'ipc://nodata'
+        c = Client(no_server, timeout=200)
+        with pytest.raises(TimeoutError) as info:
+                tid, data = c.next()
+        assert 'No data received from ipc://nodata in the last 200 ms'
