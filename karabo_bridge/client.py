@@ -10,9 +10,10 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from functools import partial
+import pickle
+
 import msgpack
 import numpy as np
-import pickle
 import zmq
 
 
@@ -75,7 +76,8 @@ class Client:
         self._pattern = self._socket.TYPE
 
         if ser == 'msgpack':
-            self._deserializer = partial(msgpack.loads, raw=False)
+            self._deserializer = partial(msgpack.loads, raw=False,
+                                         max_bin_len=0x7fffffff)
         elif ser == 'pickle':
             self._deserializer = pickle.loads
         else:

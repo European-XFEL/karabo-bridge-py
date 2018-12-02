@@ -32,7 +32,7 @@ setup(name="karabo_bridge",
       long_description=read("README.rst"),
       license="BSD-3-Clause",
       install_requires=[
-          'msgpack==0.5.4',
+          'msgpack>=0.5.4',
           'msgpack-numpy',
           'numpy',
           'pyzmq>=17.0.0',
