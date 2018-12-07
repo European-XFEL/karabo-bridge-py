@@ -52,7 +52,7 @@ def test_iterator(sim_server):
 
 def test_timeout():
     no_server = 'ipc://nodata'
-    with Client(no_server, timeout=200) as c:
+    with Client(no_server, timeout=0.2) as c:
         for _ in range(3):
             with pytest.raises(TimeoutError) as info:
                 tid, data = c.next()
