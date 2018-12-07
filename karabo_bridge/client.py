@@ -77,7 +77,7 @@ class Client:
             raise NotImplementedError('socket is not supported:', str(sock))
 
         if timeout is not None:
-            self._socket.setsockopt(zmq.RCVTIMEO, timeout * 1000)
+            self._socket.setsockopt(zmq.RCVTIMEO, int(timeout * 1000))
         self._recv_ready = False
 
         self._pattern = self._socket.TYPE
