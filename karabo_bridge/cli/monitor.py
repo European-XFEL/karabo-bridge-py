@@ -2,6 +2,7 @@
 """Monitor messages coming from Karabo bridge."""
 
 import argparse
+import gc
 
 from .glimpse import print_one_train
 from ..client import Client
@@ -24,8 +25,14 @@ def main(argv=None):
         if args.ntrains is None:
             while True:
                 print_one_train(client, verbosity=args.verbose)
+                # Explicitly trigger garbage collection,
+                # seems to be needed to avoid using lots of memory.
+                gc.collect()
         else:
             for _ in range(args.ntrains):
                 print_one_train(client, verbosity=args.verbose)
+                # Explicitly trigger garbage collection,
+                # seems to be needed to avoid using lots of memory.
+                gc.collect()
     except KeyboardInterrupt:
         print('\nexit.')
