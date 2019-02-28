@@ -43,7 +43,7 @@ class Detector:
     @staticmethod
     def getDetector(detector, source='', corr=True, gen='random'):
         if detector == 'AGIPD':
-            source = source or 'SPB_DET_AGIPD1M-1/DET/detector'
+            source = source or 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
             return AGIPD(source, corr=corr, gen=gen)
         elif detector == 'AGIPDModule':
             source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
@@ -107,28 +107,28 @@ class Detector:
         return meta
 
     def gen_data(self, trainId):
-        data = dict(self.const_fields)
+        #data = dict(self.const_fields)
+        data = {}
 
         timestamp = time()
         img = self.genfunc()
         base_src = '/'.join((self.source.rpartition('/')[0], '{}CH0:xtdf'))
         sources = [base_src.format(i) for i in range(16)]
 
-        data['__intime'] = timestamp
+        #data['__intime'] = timestamp
         # TODO: cellId differ between AGIPD/LPD
-        data['cellId'] = np.arange(self.pulses, dtype=np.uint16)
-        data['combinedFrom'] = sources
+        data['image.cellId'] = np.arange(self.pulses, dtype=np.uint16)
+        data['sources'] = sources
         data['image.data'] = img
-        data['length'] = np.full((self.pulses, 1), img.nbytes, dtype=np.uint32)
-        data['modulesPresents'] = [True for i in range(self.modules)]
+        #data['length'] = np.full((self.pulses, 1), img.nbytes, dtype=np.uint32)
+        data['modulesPresent'] = [True for i in range(self.modules)]
         if self.corrected:
             data['image.gain'] = np.zeros(self.data_shape, dtype=np.uint16)
-            data['passport'] = self.corr_passport()
-        data['pulseCount'] = self.pulses
+            data['image.passport'] = self.corr_passport()
+        #data['pulseCount'] = self.pulses
         # TODO: pulseId differ between AGIPD/LPD
-        data['pulseId'] = np.arange(self.pulses, dtype=np.uint16)
-        data['sources'] = sources
-        data['trainId'] = trainId
+        data['image.pulseId'] = np.arange(self.pulses, dtype=np.uint16)
+        data['image.trainId'] = trainId
 
         meta = self.gen_metadata(self.source, timestamp, trainId)
         return {self.source: data}, meta
