@@ -10,9 +10,10 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from functools import partial
+import pickle
+
 import msgpack
 import numpy as np
-import pickle
 import zmq
 
 
@@ -39,7 +40,16 @@ class Client:
         socket type - supported: REQ, SUB.
     ser : str, optional
         Serialization protocol to use to decode the incoming message (default
-        is msgpack) - supported: msgpack,pickle.
+        is msgpack) - supported: msgpack, pickle.
+    timeout : int
+        Timeout on :method:`next` (in seconds)
+
+        Data transfered at the EuXFEL for Mega-pixels detectors can be very
+        large. Setting a too small timeout might end in never getting data.
+        Some example of transfer timing for 1Mpix detector (AGIPD, LPD):
+            32 pulses per train (125 MB): ~0.1 s
+            128 pulses per train (500 MB): ~0.4 s
+            350 pulses per train (1.37 GB): ~1 s
 
     Raises
     ------
@@ -48,7 +58,7 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack'):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None):
 
         self._context = zmq.Context()
         self._socket = None
@@ -66,10 +76,15 @@ class Client:
         else:
             raise NotImplementedError('socket is not supported:', str(sock))
 
+        if timeout is not None:
+            self._socket.setsockopt(zmq.RCVTIMEO, int(timeout * 1000))
+        self._recv_ready = False
+
         self._pattern = self._socket.TYPE
 
         if ser == 'msgpack':
-            self._deserializer = partial(msgpack.loads, raw=False)
+            self._deserializer = partial(msgpack.loads, raw=False,
+                                         max_bin_len=0x7fffffff)
         elif ser == 'pickle':
             self._deserializer = pickle.loads
         else:
@@ -90,10 +105,23 @@ class Client:
             This dictionary is populated for protocol version 1.0 and 2.2.
             For other protocol versions, metadata information is available in
             `data` dict.
+
+        Raises
+        ------
+        TimeoutError
+            If timeout is reached before receiving data.
         """
-        if self._pattern == zmq.REQ:
+        if self._pattern == zmq.REQ and not self._recv_ready:
             self._socket.send(b'next')
-        msg = self._socket.recv_multipart(copy=False)
+            self._recv_ready = True
+        try:
+            msg = self._socket.recv_multipart(copy=False)
+        except zmq.error.Again:
+            raise TimeoutError(
+                'No data received from {} in the last {} ms'.format(
+                self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
+                self._socket.getsockopt(zmq.RCVTIMEO)))
+        self._recv_ready = False
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
