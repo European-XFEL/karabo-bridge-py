@@ -38,25 +38,32 @@ class Detector:
     pixel_size = 0  # [mm]
     distance = 0  # Sample to detector distance [mm]
     layout = np.array([[]])  # super module layout of the detector
-    const_fields = {}
 
     @staticmethod
-    def getDetector(detector, source='', corr=True, gen='random'):
+    def getDetector(detector, source='', raw=False, gen='random'):
         if detector == 'AGIPD':
-            source = source or 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
-            return AGIPD(source, corr=corr, gen=gen)
+            if not raw:
+                default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
+            else:
+                default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_RAW'
+            source = source or default
+            return AGIPD(source, raw=raw, gen=gen)
         elif detector == 'AGIPDModule':
-            source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
-            return AGIPDModule(source, corr=corr, gen=gen)
+            source = source or 'SPB_DET_AGIPD1M-1/CAL/0CH0:xtdf'
+            return AGIPDModule(source, raw=raw, gen=gen)
         elif detector == 'LPD':
-            source = source or 'FXE_DET_LPD1M-1/DET/detector'
-            return LPD(source, corr=corr, gen=gen)
+            if not raw:
+                default = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
+            else:
+                default = 'FXE_DET_LPD1M-1/CAL/APPEND_RAW'
+            source = source or default
+            return LPD(source, raw=raw, gen=gen)
         else:
             raise NotImplementedError('detector %r not available' % detector)
 
-    def __init__(self, source='', corr=False, gen='random'):
+    def __init__(self, source='', raw=True, gen='random'):
         self.source = source or 'INST_DET_GENERIC/DET/detector'
-        self.corrected = corr
+        self.raw = raw
         if gen == 'random':
             self.genfunc = self.random
         elif gen == 'zeros':
@@ -66,11 +73,17 @@ class Detector:
 
     @property
     def data_shape(self):
-        return (self.modules, self.mod_y, self.mod_x, self.pulses)
+        if self.modules > 1:
+            return (self.modules, self.mod_y, self.mod_x, self.pulses)
+        else:
+            return (self.mod_y, self.mod_x, self.pulses)
 
     @property
     def data_type(self):
-        return np.float32 if self.corrected else np.uint16
+        if self.raw or self.modules == 1:
+            return np.uint16
+        else:
+            return np.float32
 
     def corr_passport(self):
         domain = self.source.partition('/')[0]
@@ -107,28 +120,32 @@ class Detector:
         return meta
 
     def gen_data(self, trainId):
-        #data = dict(self.const_fields)
         data = {}
-
         timestamp = time()
         img = self.genfunc()
         base_src = '/'.join((self.source.rpartition('/')[0], '{}CH0:xtdf'))
         sources = [base_src.format(i) for i in range(16)]
-
-        #data['__intime'] = timestamp
         # TODO: cellId differ between AGIPD/LPD
         data['image.cellId'] = np.arange(self.pulses, dtype=np.uint16)
-        data['sources'] = sources
-        data['image.data'] = img
-        #data['length'] = np.full((self.pulses, 1), img.nbytes, dtype=np.uint32)
-        data['modulesPresent'] = [True for i in range(self.modules)]
-        if self.corrected:
-            data['image.gain'] = np.zeros(self.data_shape, dtype=np.uint16)
+        if not self.raw and self.modules > 1:
+            # Corrected data should not be single model
             data['image.passport'] = self.corr_passport()
-        #data['pulseCount'] = self.pulses
+            data['image.data'] = img.reshape(self.pulses, self.modules,
+                                             self.mod_x,  self.mod_y)
+        else:
+            data['image.data'] = img
+        if self.modules > 1:
+            # More than one modules have sources
+            data['sources'] = sources
+            data['combinedFrom'] = sources
+            data['modulesPresent'] = [True for i in range(self.modules)]
+
+        # Image gain has only enttires for one module
+        data['image.gain'] = np.zeros((self.mod_y, self.mod_x, self.pulses),
+                                       dtype=np.uint16)
         # TODO: pulseId differ between AGIPD/LPD
         data['image.pulseId'] = np.arange(self.pulses, dtype=np.uint16)
-        data['image.trainId'] = trainId
+        data['image.trainId'] = (np.ones(self.pulses) * trainId).astype(self.data_type)
 
         meta = self.gen_metadata(self.source, timestamp, trainId)
         return {self.source: data}, meta
@@ -152,21 +169,10 @@ class AGIPDModule(Detector):
         [11, 7],
     ])
 
-    const_fields = {
-        'checksum': b'\x00'*16,
-        'data': b'\x01'*416,
-        'dataId': 0,
-        'linkId': 18446744069414584335,
-        'magicNumberBegin': b'\xce\xfa\xef\xbeFDTX',
-        'magicNumberEnd': b'\xcd\xab\xad\xdeFDTX',
-        'majorTrainFormatVersion': 2,
-        'minorTrainFormatVersion': 1,
-        'reserved': b'\x00'*16,
-        'status': 0,
-    }
 
 class AGIPD(AGIPDModule):
     modules = 16
+
 
 class LPD(Detector):
     pulses = 300
@@ -181,19 +187,6 @@ class LPD(Detector):
         [11, 8, 7, 4],
         [10, 9, 6, 5],
     ])
-
-    const_fields = {
-        'checksum': b'\x11'*16,
-        'data': b'\xff'*416,
-        'dataId': 0,
-        'linkId': 18446744069414584320,
-        'magicNumberBegin': b'\xce\xfa\xef\xbeFDTX',
-        'magicNumberEnd': b'\xcd\xab\xad\xdeFDTX',
-        'majorTrainFormatVersion': 2,
-        'minorTrainFormatVersion': 1,
-        'reserved': b'\x00'*16,
-        'status': 0,
-    }
 
 
 def generate(detector, nsources):
@@ -265,10 +258,12 @@ def containize(train_data, ser, ser_func, vers):
 
     return msg
 
+
 TIMING_INTERVAL = 50
 
+
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              corrected=True, nsources=1, datagen='random', *, debug=True):
+              raw=False, nsources=1, datagen='random', *, debug=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -284,8 +279,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         The container version of the serialized data.
     detector: str, optional
         The data format to send, default is AGIPD detector.
-    corrected: bool, optional
-        Generate corrected data output if True, else RAW. Default is True.
+    raw: bool, optional
+        Generate raw data output if True, else CORRECTED. Default is False.
     nsources: int, optional
         Number of sources.
     datagen: string, optional
@@ -303,8 +298,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         ser = 'pickle.DEFAULT_PROTOCOL'
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
-
-    det = Detector.getDetector(detector, corr=corrected, gen=datagen)
+    det = Detector.getDetector(detector, raw=raw, gen=datagen)
     generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
@@ -327,7 +321,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 if n % TIMING_INTERVAL == 0:
                     t_now = time()
                     print("Sent {} trains in {:.2f} seconds ({:.2f} Hz)".format(
-                        TIMING_INTERVAL, t_now - t_prev, TIMING_INTERVAL / (t_now - t_prev)
+                        TIMING_INTERVAL, t_now -
+                        t_prev, TIMING_INTERVAL / (t_now - t_prev)
                     ))
                     t_prev = t_now
             else:
@@ -342,7 +337,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
 class ServeInThread(Thread):
     def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
-                 detector='AGIPD', corrected=True, nsources=1,
+                 detector='AGIPD', raw=False, nsources=1,
                  datagen='random'):
         super().__init__()
         self.protocol_version = protocol_version
@@ -356,7 +351,7 @@ class ServeInThread(Thread):
         else:
             raise ValueError("Unknown serialisation format %s" % ser)
 
-        det = Detector.getDetector(detector, corr=corrected, gen=datagen)
+        det = Detector.getDetector(detector, raw=raw, gen=datagen)
         self.generator = generate(det, nsources)
 
         self.zmq_context = zmq.Context()
