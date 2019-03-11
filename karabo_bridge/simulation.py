@@ -72,13 +72,6 @@ class Detector:
             raise NotImplementedError('gen func %r not implemented' % gen)
 
     @property
-    def data_shape(self):
-        if self.modules > 1:
-            return (self.modules, self.mod_y, self.mod_x, self.pulses)
-        else:
-            return (self.mod_y, self.mod_x, self.pulses)
-
-    @property
     def data_type(self):
         if self.raw or self.modules == 1:
             return np.uint16
@@ -93,21 +86,20 @@ class Detector:
             '%s/CAL/RELGAIN_CORR_Q1M1' % domain
         ]
         return passport
+
     @property
-    def _img_shape(self):
+    def data_shape(self):
         if self.modules == 1:
             return (self.mod_y, self.mod_x, self.pulses)
-        elif self.raw:
-            return (self.modules, self.mod_y, self.mod_x, self.pulses)
         else:
             return (self.pulses, self.modules, self.mod_x, self.mod_y)
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,
-                                 size=self._img_shape).astype(self.data_type)
+                                 size=self.data_shape).astype(self.data_type)
 
     def zeros(self):
-        return np.zeros(self._img_shape, dtype=self.data_type)
+        return np.zeros(self.data_shape, dtype=self.data_type)
 
     def module_position(self, ix):
         y, x = np.where(self.layout == ix)
