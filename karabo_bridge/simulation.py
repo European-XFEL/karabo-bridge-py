@@ -93,13 +93,21 @@ class Detector:
             '%s/CAL/RELGAIN_CORR_Q1M1' % domain
         ]
         return passport
+    @property
+    def _img_shape(self):
+        if self.modules == 1:
+            return (self.mod_y, self.mod_x, self.pulses)
+        elif self.raw:
+            return (self.modules, self.mod_y, self.mod_x, self.pulses)
+        else:
+            return (self.pulses, self.modules, self.mod_x, self.mod_y)
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,
-                                 size=self.data_shape).astype(self.data_type)
+                                 size=self._img_shape).astype(self.data_type)
 
     def zeros(self):
-        return np.zeros(self.data_shape, dtype=self.data_type)
+        return np.zeros(self._img_shape, dtype=self.data_type)
 
     def module_position(self, ix):
         y, x = np.where(self.layout == ix)
@@ -122,25 +130,19 @@ class Detector:
     def gen_data(self, trainId):
         data = {}
         timestamp = time()
-        img = self.genfunc()
+        data['image.data'] = self.genfunc()
         base_src = '/'.join((self.source.rpartition('/')[0], '{}CH0:xtdf'))
         sources = [base_src.format(i) for i in range(16)]
         # TODO: cellId differ between AGIPD/LPD
         data['image.cellId'] = np.arange(self.pulses, dtype=np.uint16)
-        if not self.raw and self.modules > 1:
-            # Corrected data should not be single model
+        if not self.raw:
             data['image.passport'] = self.corr_passport()
-            data['image.data'] = img.reshape(self.pulses, self.modules,
-                                             self.mod_x,  self.mod_y)
-        else:
-            data['image.data'] = img
         if self.modules > 1:
             # More than one modules have sources
             data['sources'] = sources
             data['combinedFrom'] = sources
             data['modulesPresent'] = [True for i in range(self.modules)]
-
-        # Image gain has only enttires for one module
+        # Image gain has only entries for one module
         data['image.gain'] = np.zeros((self.mod_y, self.mod_x, self.pulses),
                                        dtype=np.uint16)
         # TODO: pulseId differ between AGIPD/LPD
