@@ -3,8 +3,8 @@ import numpy as np
 from karabo_bridge.simulation import Detector
 
 
-source_lpd = 'FXE_DET_LPD1M-1/DET/detector'
-source_spb_module = 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
+source_lpd = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
+source_spb_module = 'SPB_DET_AGIPD1M-1/CAL/0CH0:xtdf'
 train_id = 10000000000
 
 
