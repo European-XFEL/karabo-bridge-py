@@ -4,7 +4,7 @@ from karabo_bridge.simulation import Detector
 
 
 source_lpd = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
-source_spb_module = 'SPB_DET_AGIPD1M-1/CAL/0CH0:xtdf'
+source_spb_module = 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
 train_id = 10000000000
 
 
@@ -21,11 +21,11 @@ def test_lpd():
     
 
 def test_gen():
-    agipd = Detector.getDetector('AGIPDModule', gen='zeros')
+    agipd = Detector.getDetector('AGIPDModule', gen='zeros', raw=True)
     data, meta = agipd.gen_data(train_id)
 
     assert len(data) == len(meta) == 1
     assert source_spb_module in data
     assert meta[source_spb_module]['timestamp.tid'] == train_id
-    assert data[source_spb_module]['image.data'].shape == (1, 128, 512, 64)
+    assert data[source_spb_module]['image.data'].shape == (128, 512, 64)
     assert not np.any(data[source_spb_module]['image.data'])
