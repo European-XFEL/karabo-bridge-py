@@ -40,30 +40,34 @@ class Detector:
     layout = np.array([[]])  # super module layout of the detector
 
     @staticmethod
-    def getDetector(detector, source='', raw=False, gen='random'):
+    def getDetector(detector, source='', raw=False, gen='random', reshaped=False):
         if detector == 'AGIPD':
             if not raw:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
             else:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_RAW'
             source = source or default
-            return AGIPD(source, raw=raw, gen=gen)
+            return AGIPD(source, raw=raw, gen=gen, reshaped=reshaped)
         elif detector == 'AGIPDModule':
-            source = source or 'SPB_DET_AGIPD1M-1/CAL/0CH0:xtdf'
-            return AGIPDModule(source, raw=raw, gen=gen)
+            if not raw:
+                raise NotImplementedError(
+                    'Calib. Data for single Modules not available yet')
+            source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
+            return AGIPDModule(source, raw=raw, gen=gen, reshaped=reshaped)
         elif detector == 'LPD':
             if not raw:
                 default = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
             else:
                 default = 'FXE_DET_LPD1M-1/CAL/APPEND_RAW'
             source = source or default
-            return LPD(source, raw=raw, gen=gen)
+            return LPD(source, raw=raw, gen=gen, reshaped=reshaped)
         else:
             raise NotImplementedError('detector %r not available' % detector)
 
-    def __init__(self, source='', raw=True, gen='random'):
+    def __init__(self, source='', raw=True, gen='random', reshaped=False):
         self.source = source or 'INST_DET_GENERIC/DET/detector'
         self.raw = raw
+        self.reshaped = reshaped
         if gen == 'random':
             self.genfunc = self.random
         elif gen == 'zeros':
@@ -73,7 +77,7 @@ class Detector:
 
     @property
     def data_type(self):
-        if self.raw or self.modules == 1:
+        if self.raw:
             return np.uint16
         else:
             return np.float32
@@ -92,7 +96,11 @@ class Detector:
         if self.modules == 1:
             return (self.mod_y, self.mod_x, self.pulses)
         else:
-            return (self.pulses, self.modules, self.mod_x, self.mod_y)
+            if self.reshaped:
+                return (self.pulses, self.modules, self.mod_x, self.mod_y)
+            else:
+                return (self.modules, self.mod_y, self.mod_x, self.pulses)
+
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,
@@ -136,10 +144,11 @@ class Detector:
             data['modulesPresent'] = [True for i in range(self.modules)]
         # Image gain has only entries for one module
         data['image.gain'] = np.zeros((self.mod_y, self.mod_x, self.pulses),
-                                       dtype=np.uint16)
+                                      dtype=np.uint16)
         # TODO: pulseId differ between AGIPD/LPD
         data['image.pulseId'] = np.arange(self.pulses, dtype=np.uint16)
-        data['image.trainId'] = (np.ones(self.pulses) * trainId).astype(self.data_type)
+        data['image.trainId'] = (
+            np.ones(self.pulses) * trainId).astype(self.data_type)
 
         meta = self.gen_metadata(self.source, timestamp, trainId)
         return {self.source: data}, meta
@@ -257,7 +266,8 @@ TIMING_INTERVAL = 50
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              raw=False, nsources=1, datagen='random', *, debug=True):
+              raw=False, nsources=1, datagen='random', reshaped=False, *,
+              debug=True):
     """"Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
@@ -279,6 +289,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         Number of sources.
     datagen: string, optional
         Generator function used to generate detector data. Default is random.
+    reshaped: bool, optional
+        Reshape the image.data array to (npluse, (nmod), x, y). Default False
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -292,7 +304,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         ser = 'pickle.DEFAULT_PROTOCOL'
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
-    det = Detector.getDetector(detector, raw=raw, gen=datagen)
+    det = Detector.getDetector(detector, raw=raw, gen=datagen, reshaped=reshaped)
     generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
