@@ -30,6 +30,10 @@ def main(argv=None):
              'False)'
     )
     ap.add_argument(
+        '--reshape', action='store_true',
+        help='Reshape the output array for image.data to (npulse, (nmod), x, y)'
+    )
+    ap.add_argument(
         '-n', '--nsources', type=int, default=1,
         help='Number of simulated detector sources to send (default 1)'
     )
@@ -37,13 +41,15 @@ def main(argv=None):
         '-g', '--gen', default='random', choices=['random', 'zeros'],
         help='Generator function to generate simulated detector data'
     )
+
     ap.add_argument(
         '--debug', action='store_true',
         help='More verbose terminal logging'
     )
     args = ap.parse_args(argv)
     start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.raw, args.nsources, args.gen, debug=args.debug)
+              args.raw, args.nsources, args.gen, reshaped=args.reshape,
+              debug=args.debug)
 
 
 if __name__ == '__main__':
