@@ -146,9 +146,9 @@ class Detector:
         data['image.gain'] = np.zeros((self.mod_y, self.mod_x, self.pulses),
                                       dtype=np.uint16)
         # TODO: pulseId differ between AGIPD/LPD
-        data['image.pulseId'] = np.arange(self.pulses, dtype=np.uint16)
+        data['image.pulseId'] = np.arange(self.pulses, dtype=np.uint64)
         data['image.trainId'] = (
-            np.ones(self.pulses) * trainId).astype(self.data_type)
+            np.ones(self.pulses) * trainId).astype(np.uint64)
 
         meta = self.gen_metadata(self.source, timestamp, trainId)
         return {self.source: data}, meta
