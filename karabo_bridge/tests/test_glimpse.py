@@ -20,5 +20,4 @@ def test_save(sim_server):
         path = os.path.join(td, files[0])
         with h5py.File(path, 'r') as f:
             trainId = f['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf/image.trainId'][:]
-            print(trainId)
             assert trainId[0] == 10000000000
