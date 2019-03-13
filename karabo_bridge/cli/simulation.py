@@ -30,10 +30,6 @@ def main(argv=None):
              'False)'
     )
     ap.add_argument(
-        '--reshape', action='store_true',
-        help='Reshape the output array for image.data to (npulse, (nmod), x, y)'
-    )
-    ap.add_argument(
         '-n', '--nsources', type=int, default=1,
         help='Number of simulated detector sources to send (default 1)'
     )

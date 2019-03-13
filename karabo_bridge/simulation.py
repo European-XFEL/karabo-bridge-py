@@ -40,34 +40,33 @@ class Detector:
     layout = np.array([[]])  # super module layout of the detector
 
     @staticmethod
-    def getDetector(detector, source='', raw=False, gen='random', reshaped=False):
+    def getDetector(detector, source='', raw=False, gen='random'):
         if detector == 'AGIPD':
             if not raw:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
             else:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_RAW'
             source = source or default
-            return AGIPD(source, raw=raw, gen=gen, reshaped=reshaped)
+            return AGIPD(source, raw=raw, gen=gen)
         elif detector == 'AGIPDModule':
             if not raw:
                 raise NotImplementedError(
                     'Calib. Data for single Modules not available yet')
             source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
-            return AGIPDModule(source, raw=raw, gen=gen, reshaped=reshaped)
+            return AGIPDModule(source, raw=raw, gen=gen)
         elif detector == 'LPD':
             if not raw:
                 default = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
             else:
                 default = 'FXE_DET_LPD1M-1/CAL/APPEND_RAW'
             source = source or default
-            return LPD(source, raw=raw, gen=gen, reshaped=reshaped)
+            return LPD(source, raw=raw, gen=gen)
         else:
             raise NotImplementedError('detector %r not available' % detector)
 
-    def __init__(self, source='', raw=True, gen='random', reshaped=False):
+    def __init__(self, source='', raw=True, gen='random'):
         self.source = source or 'INST_DET_GENERIC/DET/detector'
         self.raw = raw
-        self.reshaped = reshaped
         if gen == 'random':
             self.genfunc = self.random
         elif gen == 'zeros':
@@ -96,10 +95,7 @@ class Detector:
         if self.modules == 1:
             return (self.mod_y, self.mod_x, self.pulses)
         else:
-            if self.reshaped:
-                return (self.pulses, self.modules, self.mod_x, self.mod_y)
-            else:
-                return (self.modules, self.mod_y, self.mod_x, self.pulses)
+            return (self.modules, self.mod_y, self.mod_x, self.pulses)
 
 
     def random(self):
@@ -266,7 +262,7 @@ TIMING_INTERVAL = 50
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              raw=False, nsources=1, datagen='random', reshaped=False, *,
+              raw=False, nsources=1, datagen='random', *,
               debug=True):
     """"Karabo bridge server simulation.
 
@@ -289,8 +285,6 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         Number of sources.
     datagen: string, optional
         Generator function used to generate detector data. Default is random.
-    reshaped: bool, optional
-        Reshape the image.data array to (npluse, (nmod), x, y). Default False
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -304,7 +298,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         ser = 'pickle.DEFAULT_PROTOCOL'
     else:
         raise ValueError("Unknown serialisation format %s" % ser)
-    det = Detector.getDetector(detector, raw=raw, gen=datagen, reshaped=reshaped)
+    det = Detector.getDetector(detector, raw=raw, gen=datagen)
     generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
