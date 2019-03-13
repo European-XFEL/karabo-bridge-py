@@ -321,8 +321,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 if n % TIMING_INTERVAL == 0:
                     t_now = time()
                     print("Sent {} trains in {:.2f} seconds ({:.2f} Hz)".format(
-                        TIMING_INTERVAL, t_now -
-                        t_prev, TIMING_INTERVAL / (t_now - t_prev)
+                        TIMING_INTERVAL, t_now - t_prev,
+                        TIMING_INTERVAL / (t_now - t_prev)
                     ))
                     t_prev = t_now
             else:
