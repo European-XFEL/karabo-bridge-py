@@ -136,7 +136,6 @@ class Detector:
         if self.modules > 1:
             # More than one modules have sources
             data['sources'] = sources
-            data['combinedFrom'] = sources
             data['modulesPresent'] = [True for i in range(self.modules)]
         # Image gain has only entries for one module
         data['image.gain'] = np.zeros((self.mod_y, self.mod_x, self.pulses),
