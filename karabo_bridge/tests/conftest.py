@@ -8,7 +8,7 @@ from karabo_bridge.simulation import ServeInThread
 def sim_server():
     with TemporaryDirectory() as td:
         endpoint = "ipc://{}/server".format(td)
-        with ServeInThread(endpoint, detector='AGIPDModule'):
+        with ServeInThread(endpoint, detector='AGIPDModule', raw=True):
             yield endpoint
 
 
@@ -16,7 +16,8 @@ def sim_server():
 def sim_server_pickle():
     with TemporaryDirectory() as td:
         endpoint = "ipc://{}/server".format(td)
-        with ServeInThread(endpoint, detector='AGIPDModule', ser='pickle'):
+        with ServeInThread(endpoint, detector='AGIPDModule',
+                           raw=True, ser='pickle'):
             yield endpoint
 
 
@@ -24,5 +25,6 @@ def sim_server_pickle():
 def sim_server_version_1():
     with TemporaryDirectory() as td:
         endpoint = "ipc://{}/server".format(td)
-        with ServeInThread(endpoint, detector='AGIPDModule', protocol_version='1.0'):
+        with ServeInThread(endpoint, detector='AGIPDModule', raw=True,
+                           protocol_version='1.0'):
             yield endpoint

@@ -11,7 +11,8 @@ def main(argv=None):
         'port', help="TCP port the server will bind"
     )
     ap.add_argument(
-        '-d', '--detector', default='AGIPD', choices=['AGIPD', 'AGIPDModule', 'LPD'],
+        '-d', '--detector', default='AGIPD', choices=['AGIPD', 'AGIPDModule',
+                                                      'LPD'],
         help="Which kind of detector to simulate (default: AGIPD)"
     )
     ap.add_argument(
@@ -24,9 +25,9 @@ def main(argv=None):
         help="Message serialisation format (default: msgpack)"
     )
     ap.add_argument(
-        '-c', '--corrected', type=bool, default=True,
-        help='Simulate corrected data if True, raw data if False (default'
-             'True)'
+        '-r', '--raw', action='store_true',
+        help='Simulate raw data if True, corrected data if False (default'
+             'False)'
     )
     ap.add_argument(
         '-n', '--nsources', type=int, default=1,
@@ -36,10 +37,15 @@ def main(argv=None):
         '-g', '--gen', default='random', choices=['random', 'zeros'],
         help='Generator function to generate simulated detector data'
     )
+
     ap.add_argument(
         '--debug', action='store_true',
         help='More verbose terminal logging'
     )
     args = ap.parse_args(argv)
     start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.corrected, args.nsources, args.gen, debug=args.debug)
+              args.raw, args.nsources, args.gen, debug=args.debug)
+
+
+if __name__ == '__main__':
+    main()
