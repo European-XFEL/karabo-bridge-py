@@ -10,7 +10,6 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from functools import partial
-import pickle
 
 import msgpack
 import numpy as np
