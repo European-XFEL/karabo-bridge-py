@@ -128,23 +128,15 @@ class Client:
             source = md['source']
             content = md['content']
 
-            if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
-                           'pickle.DEFAULT_PROTOCOL'):
+            if content == 'msgpack':
                 data[source] = self.unpack(payload.bytes)
                 meta[source] = md.get('metadata', {})
-            elif content in ('array', 'ImageData'):
-                dtype = md['dtype']
-                shape = md['shape']
-
+            elif content == 'array':
+                dtype, shape = md['dtype'], md['shape']
                 array = np.frombuffer(payload.buffer, dtype=dtype).reshape(shape)
-
-                if content == 'array':
-                    data[source].update({md['path']: array})
-                else:
-                    data[source].update({md['path']: md['params']})
-                    data[source][md['path']]['Data'] = array
+                data[source].update({md['path']: array})
             else:
-                raise RuntimeError('unknown message content:', md['content'])
+                raise RuntimeError('Unknown message content:', md['content'])
         return data, meta
 
     def __enter__(self):
