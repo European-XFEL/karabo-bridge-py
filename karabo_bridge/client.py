@@ -62,6 +62,7 @@ class Client:
     def __init__(self, endpoint, sock='REQ', context=None, timeout=None):
 
         self._context = context or CONTEXT
+        print(type(self._context))
         self._socket = None
 
         if sock == 'REQ':
@@ -112,8 +113,8 @@ class Client:
         except zmq.error.Again:
             raise TimeoutError(
                 'No data received from {} in the last {} ms'.format(
-                self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
-                self._socket.getsockopt(zmq.RCVTIMEO)))
+                    self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
+                    self._socket.getsockopt(zmq.RCVTIMEO)))
         self._recv_ready = False
         return self._deserialize(msg)
 
@@ -147,7 +148,7 @@ class Client:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._context.destroy(linger=0)
+        self._socket.close(linger=0)
 
     def __iter__(self):
         return self

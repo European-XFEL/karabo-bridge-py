@@ -31,7 +31,7 @@ def test_context_manager(sim_server):
         data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
-    assert c._context.closed
+    assert c._socket.closed
 
 
 def test_iterator(sim_server):
