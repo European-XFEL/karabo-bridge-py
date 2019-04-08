@@ -19,9 +19,6 @@ import zmq
 __all__ = ['Client']
 
 
-CONTEXT = zmq.Context()
-
-
 class Client:
     """Karabo bridge client for Karabo pipeline data.
 
@@ -40,6 +37,9 @@ class Client:
         server socket you want to connect to (only support TCP socket).
     sock : str, optional
         socket type - supported: REQ, SUB.
+    ser : str, DEPRECATED
+        Serialization protocol to use to decode the incoming message (default
+        is msgpack) - supported: msgpack.
     context : zmq.Context
         To run the Client's sockets using a provided ZeroMQ context.
     timeout : int
@@ -59,9 +59,13 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', context=None, timeout=None):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None,
+                 context=None):
 
-        self._context = context or CONTEXT
+        if ser != 'msgpack':
+            raise Exception('Only serialization supported is msgpack')
+
+        self._context = context or zmq.Context()
         self._socket = None
 
         if sock == 'REQ':
@@ -147,7 +151,7 @@ class Client:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._socket.close(linger=0)
+        self._context.destroy(linger=0)
 
     def __iter__(self):
         return self
