@@ -20,6 +20,9 @@ import zmq
 __all__ = ['Client']
 
 
+CONTEXT = zmq.Context()
+
+
 class Client:
     """Karabo bridge client for Karabo pipeline data.
 
@@ -38,6 +41,8 @@ class Client:
         server socket you want to connect to (only support TCP socket).
     sock : str, optional
         socket type - supported: REQ, SUB.
+    context : zmq.Context
+        To run the Client's sockets using a provided ZeroMQ context.
     timeout : int
         Timeout on :method:`next` (in seconds)
 
@@ -55,9 +60,9 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', timeout=None):
+    def __init__(self, endpoint, sock='REQ', context=None, timeout=None):
 
-        self._context = zmq.Context()
+        self._context = context or CONTEXT
         self._socket = None
 
         if sock == 'REQ':
@@ -136,7 +141,7 @@ class Client:
                 array = np.frombuffer(payload.buffer, dtype=dtype).reshape(shape)
                 data[source].update({md['path']: array})
             else:
-                raise RuntimeError('Unknown message content:', md['content'])
+                raise RuntimeError('Unknown message: %s' % md['content'])
         return data, meta
 
     def __enter__(self):
