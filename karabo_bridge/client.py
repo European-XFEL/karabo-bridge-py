@@ -62,7 +62,6 @@ class Client:
     def __init__(self, endpoint, sock='REQ', context=None, timeout=None):
 
         self._context = context or CONTEXT
-        print(type(self._context))
         self._socket = None
 
         if sock == 'REQ':
