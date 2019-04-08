@@ -13,15 +13,6 @@ def sim_server():
 
 
 @pytest.fixture
-def sim_server_pickle():
-    with TemporaryDirectory() as td:
-        endpoint = "ipc://{}/server".format(td)
-        with ServeInThread(endpoint, detector='AGIPDModule',
-                           raw=True, ser='pickle'):
-            yield endpoint
-
-
-@pytest.fixture
 def sim_server_version_1():
     with TemporaryDirectory() as td:
         endpoint = "ipc://{}/server".format(td)
