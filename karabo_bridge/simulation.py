@@ -97,7 +97,6 @@ class Detector:
         else:
             return (self.modules, self.mod_y, self.mod_x, self.pulses)
 
-
     def random(self):
         return np.random.uniform(low=1500, high=1600,
                                  size=self.data_shape).astype(self.data_type)
@@ -290,13 +289,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     socket.setsockopt(zmq.LINGER, 0)
     socket.bind('tcp://*:{}'.format(port))
 
-    if ser == 'msgpack':
-        serialize = partial(msgpack.dumps, use_bin_type=True)
-    elif ser == 'pickle':
-        serialize = pickle.dumps
-        ser = 'pickle.DEFAULT_PROTOCOL'
-    else:
+    if ser != 'msgpack':
         raise ValueError("Unknown serialisation format %s" % ser)
+    serialize = partial(msgpack.dumps, use_bin_type=True)
     det = Detector.getDetector(detector, raw=raw, gen=datagen)
     generator = generate(det, nsources)
 
@@ -319,10 +314,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
                 n += 1
                 if n % TIMING_INTERVAL == 0:
                     t_now = time()
-                    print("Sent {} trains in {:.2f} seconds ({:.2f} Hz)".format(
-                        TIMING_INTERVAL, t_now - t_prev,
-                        TIMING_INTERVAL / (t_now - t_prev)
-                    ))
+                    print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
+                          ''.format(TIMING_INTERVAL, t_now - t_prev,
+                                    TIMING_INTERVAL / (t_now - t_prev)))
                     t_prev = t_now
             else:
                 print('wrong request')
@@ -342,13 +336,9 @@ class ServeInThread(Thread):
         self.protocol_version = protocol_version
 
         self.serialization_fmt = ser
-        if ser == 'msgpack':
-            self.serialize = partial(msgpack.dumps, use_bin_type=True)
-        elif ser == 'pickle':
-            self.serialize = pickle.dumps
-            self.serialization_fmt = 'pickle.DEFAULT_PROTOCOL'
-        else:
+        if ser != 'msgpack':
             raise ValueError("Unknown serialisation format %s" % ser)
+        self.serialize = partial(msgpack.dumps, use_bin_type=True)
 
         det = Detector.getDetector(detector, raw=raw, gen=datagen)
         self.generator = generate(det, nsources)

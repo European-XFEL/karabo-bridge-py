@@ -26,21 +26,12 @@ def test_pull_socket(sim_server):
         c = Client(sim_server, sock='PULL')
 
 
-def test_pickle(sim_server_pickle):
-    c = Client(sim_server_pickle, ser='pickle')
-    data, metadata = c.next()
-    assert isinstance(data, dict)
-    assert isinstance(metadata, dict)
-    image = data['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf']['image.data']
-    assert isinstance(image, np.ndarray)
-
-
 def test_context_manager(sim_server):
     with Client(sim_server) as c:
         data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
-    assert c._context.closed
+    assert c._socket.closed
 
 
 def test_iterator(sim_server):

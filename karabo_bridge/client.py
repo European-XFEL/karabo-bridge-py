@@ -10,7 +10,6 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from functools import partial
-import pickle
 
 import msgpack
 import numpy as np
@@ -38,9 +37,11 @@ class Client:
         server socket you want to connect to (only support TCP socket).
     sock : str, optional
         socket type - supported: REQ, SUB.
-    ser : str, optional
+    ser : str, DEPRECATED
         Serialization protocol to use to decode the incoming message (default
-        is msgpack) - supported: msgpack, pickle.
+        is msgpack) - supported: msgpack.
+    context : zmq.Context
+        To run the Client's sockets using a provided ZeroMQ context.
     timeout : int
         Timeout on :method:`next` (in seconds)
 
@@ -58,11 +59,14 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None):
+    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None,
+                 context=None):
 
-        self._context = zmq.Context()
+        if ser != 'msgpack':
+            raise Exception('Only serialization supported is msgpack')
+
+        self._context = context or zmq.Context()
         self._socket = None
-        self._deserializer = None
 
         if sock == 'REQ':
             self._socket = self._context.socket(zmq.REQ)
@@ -74,21 +78,14 @@ class Client:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
             self._socket.connect(endpoint)
         else:
-            raise NotImplementedError('socket is not supported:', str(sock))
+            raise NotImplementedError('Unsupported socket: %s' % str(sock))
 
         if timeout is not None:
             self._socket.setsockopt(zmq.RCVTIMEO, int(timeout * 1000))
         self._recv_ready = False
 
         self._pattern = self._socket.TYPE
-
-        if ser == 'msgpack':
-            self._deserializer = partial(msgpack.loads, raw=False,
-                                         max_bin_len=0x7fffffff)
-        elif ser == 'pickle':
-            self._deserializer = pickle.loads
-        else:
-            raise NotImplementedError('serializer is not supported:', str(ser))
+        self.unpack = partial(msgpack.loads, raw=False, max_bin_len=0x7fffffff)
 
     def next(self):
         """Request next data container.
@@ -119,14 +116,14 @@ class Client:
         except zmq.error.Again:
             raise TimeoutError(
                 'No data received from {} in the last {} ms'.format(
-                self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
-                self._socket.getsockopt(zmq.RCVTIMEO)))
+                    self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
+                    self._socket.getsockopt(zmq.RCVTIMEO)))
         self._recv_ready = False
         return self._deserialize(msg)
 
     def _deserialize(self, msg):
         if len(msg) < 2:  # protocol version 1.0
-            data = self._deserializer(msg[-1].bytes)
+            data = self.unpack(msg[-1].bytes)
             meta = {}
             for key, value in data.items():
                 meta[key] = value.get('metadata', {})
@@ -135,27 +132,19 @@ class Client:
         data = {}
         meta = {}
         for header, payload in zip(*[iter(msg)]*2):
-            md = self._deserializer(header.bytes)
+            md = self.unpack(header.bytes)
             source = md['source']
             content = md['content']
 
-            if content in ('msgpack', 'pickle.HIGHEST_PROTOCOL',
-                           'pickle.DEFAULT_PROTOCOL'):
-                data[source] = self._deserializer(payload.bytes)
+            if content == 'msgpack':
+                data[source] = self.unpack(payload.bytes)
                 meta[source] = md.get('metadata', {})
-            elif content in ('array', 'ImageData'):
-                dtype = md['dtype']
-                shape = md['shape']
-
+            elif content == 'array':
+                dtype, shape = md['dtype'], md['shape']
                 array = np.frombuffer(payload.buffer, dtype=dtype).reshape(shape)
-
-                if content == 'array':
-                    data[source].update({md['path']: array})
-                else:
-                    data[source].update({md['path']: md['params']})
-                    data[source][md['path']]['Data'] = array
+                data[source].update({md['path']: array})
             else:
-                raise RuntimeError('unknown message content:', md['content'])
+                raise RuntimeError('Unknown message: %s' % md['content'])
         return data, meta
 
     def __enter__(self):
