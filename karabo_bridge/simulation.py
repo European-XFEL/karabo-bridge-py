@@ -40,20 +40,21 @@ class Detector:
     layout = np.array([[]])  # super module layout of the detector
 
     @staticmethod
-    def getDetector(detector, source='', raw=False, gen='random'):
+    def getDetector(detector, source='', raw=False, gen='random',
+                    frame='online'):
         if detector == 'AGIPD':
             if not raw:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
             else:
                 default = 'SPB_DET_AGIPD1M-1/CAL/APPEND_RAW'
             source = source or default
-            return AGIPD(source, raw=raw, gen=gen)
+            return AGIPD(source, raw=raw, gen=gen, frame=frame)
         elif detector == 'AGIPDModule':
             if not raw:
                 raise NotImplementedError(
                     'Calib. Data for single Modules not available yet')
             source = source or 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
-            return AGIPDModule(source, raw=raw, gen=gen)
+            return AGIPDModule(source, raw=raw, gen=gen, frame=frame)
         elif detector == 'LPD':
             if not raw:
                 default = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
@@ -64,9 +65,10 @@ class Detector:
         else:
             raise NotImplementedError('detector %r not available' % detector)
 
-    def __init__(self, source='', raw=True, gen='random'):
+    def __init__(self, source='', raw=True, gen='random', frame='online'):
         self.source = source or 'INST_DET_GENERIC/DET/detector'
         self.raw = raw
+        self.frame = frame
         if gen == 'random':
             self.genfunc = self.random
         elif gen == 'zeros':
@@ -92,10 +94,11 @@ class Detector:
 
     @property
     def data_shape(self):
-        if self.modules == 1:
-            return (self.mod_y, self.mod_x, self.pulses)
+        if self.frame == 'online':
+            shape = (self.modules, self.mod_y, self.mod_x, self.pulses)
         else:
-            return (self.modules, self.mod_y, self.mod_x, self.pulses)
+            shape = (self.pulses, self.modules, self.mod_x, self.mod_y)
+        return shape[1:] if self.modules == 1 else shape
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,
@@ -260,7 +263,7 @@ TIMING_INTERVAL = 50
 
 
 def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
-              raw=False, nsources=1, datagen='random', *,
+              raw=False, nsources=1, datagen='random', frame='online', *,
               debug=True):
     """"Karabo bridge server simulation.
 
@@ -283,6 +286,14 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         Number of sources.
     datagen: string, optional
         Generator function used to generate detector data. Default is random.
+    frame: string optional ['online', 'file']
+        Data array axes ordering for Mhz detector.
+        The data arrays's axes can have different ordering on online data. The
+        calibration processing orders axes as (module, fs, ss, pulses), whereas
+        data in files have (pulses, modules, ss, fs).
+        This option allow to chose between the 2 ordering. Note that the real
+        system can send data in both shape with a performance penalty for the
+        file-like array shape.
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -292,7 +303,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     if ser != 'msgpack':
         raise ValueError("Unknown serialisation format %s" % ser)
     serialize = partial(msgpack.dumps, use_bin_type=True)
-    det = Detector.getDetector(detector, raw=raw, gen=datagen)
+    det = Detector.getDetector(detector, raw=raw, gen=datagen, frame=frame)
     generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
@@ -331,7 +342,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 class ServeInThread(Thread):
     def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
                  detector='AGIPD', raw=False, nsources=1,
-                 datagen='random'):
+                 datagen='random', frame='online'):
         super().__init__()
         self.protocol_version = protocol_version
 
@@ -340,7 +351,7 @@ class ServeInThread(Thread):
             raise ValueError("Unknown serialisation format %s" % ser)
         self.serialize = partial(msgpack.dumps, use_bin_type=True)
 
-        det = Detector.getDetector(detector, raw=raw, gen=datagen)
+        det = Detector.getDetector(detector, raw=raw, gen=datagen, frame=frame)
         self.generator = generate(det, nsources)
 
         self.zmq_context = zmq.Context()
