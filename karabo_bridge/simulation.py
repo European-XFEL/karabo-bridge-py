@@ -96,9 +96,9 @@ class Detector:
     def data_shape(self):
         shape = () if self.modules == 1 else (self.modules, )
         if self.frame == 'online':
-            shape = (*shape, self.mod_y, self.mod_x, self.pulses)
+            shape += (self.mod_y, self.mod_x, self.pulses)
         else:
-            shape = (self.pulses, *shape, self.mod_x, self.mod_y)
+            shape = (self.pulses, ) + shape + (self.mod_x, self.mod_y)
         return shape
 
     def random(self):
