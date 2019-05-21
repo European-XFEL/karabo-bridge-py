@@ -39,7 +39,7 @@ def main(argv=None):
         help='Generator function to generate simulated detector data'
     )
     ap.add_argument(
-        '--data_like', default='online', choices=['online', 'file'],
+        '--data-like', default='online', choices=['online', 'file'],
         help='Data array axes ordering: online -> (modules, fs, ss, pulses), '
              'file -> (pulses, modules, ss, fs)'
     )
