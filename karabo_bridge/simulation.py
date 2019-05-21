@@ -296,7 +296,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         - online: (modules, fs, ss, pulses)
         - file: (pulses, modules, ss, fs)
         Note that the real system can send data in both shape with a
-        performance penalty for the file-like array shape, default is online.
+        performance penalty for the file-like array shape.
+
+        Default is online.
     """
     context = zmq.Context()
     socket = context.socket(zmq.REP)

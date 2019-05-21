@@ -1,4 +1,6 @@
 import argparse
+from textwrap import dedent
+
 from karabo_bridge.simulation import start_gen
 
 
@@ -37,7 +39,11 @@ def main(argv=None):
         '-g', '--gen', default='random', choices=['random', 'zeros'],
         help='Generator function to generate simulated detector data'
     )
-
+    ap.add_argument(
+        '--data_like', default='online', choices=['online', 'file'],
+        help='Data array axes ordering: online -> (modules, fs, ss, pulses), '
+             'file -> (pulses, modules, ss, fs)'
+    )
     ap.add_argument(
         '--debug', action='store_true',
         help='More verbose terminal logging'
