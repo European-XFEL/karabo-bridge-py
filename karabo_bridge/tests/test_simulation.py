@@ -32,6 +32,6 @@ def test_gen():
 
 
 def test_filelike_shape():
-    agipd = Detector.getDetector('AGIPDModule', gen='zeros', raw=True, frame='file')
+    agipd = Detector.getDetector('AGIPDModule', gen='zeros', raw=True, data_like='file')
     data, meta = agipd.gen_data(train_id)
     assert data[source_spb_module]['image.data'].shape == (64, 512, 128)
