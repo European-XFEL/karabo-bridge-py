@@ -1,5 +1,4 @@
 import argparse
-from textwrap import dedent
 
 from karabo_bridge.simulation import start_gen
 
