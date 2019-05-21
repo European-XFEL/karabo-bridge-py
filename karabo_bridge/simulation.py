@@ -94,11 +94,12 @@ class Detector:
 
     @property
     def data_shape(self):
+        shape = () if self.modules == 1 else (self.modules, )
         if self.data_like == 'online':
-            shape = (self.modules, self.mod_y, self.mod_x, self.pulses)
+            shape += (self.mod_y, self.mod_x, self.pulses)
         else:
-            shape = (self.pulses, self.modules, self.mod_x, self.mod_y)
-        return shape[1:] if self.modules == 1 else shape
+            shape = (self.pulses, ) + shape + (self.mod_x, self.mod_y)
+        return shape
 
     def random(self):
         return np.random.uniform(low=1500, high=1600,

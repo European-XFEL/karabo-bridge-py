@@ -4,7 +4,6 @@ from karabo_bridge.simulation import Detector
 
 
 source_lpd = 'FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED'
-source_spb = 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'
 source_spb_module = 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'
 train_id = 10000000000
 
@@ -33,6 +32,6 @@ def test_gen():
 
 
 def test_filelike_shape():
-    agipd = Detector.getDetector('AGIPD', gen='zeros', frame='file')
+    agipd = Detector.getDetector('AGIPDModule', gen='zeros', raw=True, frame='file')
     data, meta = agipd.gen_data(train_id)
-    assert data[source_spb]['image.data'].shape == (64, 16, 512, 128)
+    assert data[source_spb_module]['image.data'].shape == (64, 512, 128)
