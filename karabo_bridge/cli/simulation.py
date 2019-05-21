@@ -50,7 +50,7 @@ def main(argv=None):
     )
     args = ap.parse_args(argv)
     start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.raw, args.nsources, args.gen, debug=args.debug)
+              args.raw, args.nsources, args.gen, args.data_like, debug=args.debug)
 
 
 if __name__ == '__main__':
