@@ -29,3 +29,9 @@ def test_gen():
     assert meta[source_spb_module]['timestamp.tid'] == train_id
     assert data[source_spb_module]['image.data'].shape == (128, 512, 64)
     assert not np.any(data[source_spb_module]['image.data'])
+
+
+def test_filelike_shape():
+    agipd = Detector.getDetector('AGIPDModule', gen='zeros', raw=True, data_like='file')
+    data, meta = agipd.gen_data(train_id)
+    assert data[source_spb_module]['image.data'].shape == (64, 512, 128)

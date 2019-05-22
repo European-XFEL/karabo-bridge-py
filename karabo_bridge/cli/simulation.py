@@ -1,4 +1,5 @@
 import argparse
+
 from karabo_bridge.simulation import start_gen
 
 
@@ -37,14 +38,18 @@ def main(argv=None):
         '-g', '--gen', default='random', choices=['random', 'zeros'],
         help='Generator function to generate simulated detector data'
     )
-
+    ap.add_argument(
+        '--data-like', default='online', choices=['online', 'file'],
+        help='Data array axes ordering: online -> (modules, fs, ss, pulses), '
+             'file -> (pulses, modules, ss, fs)'
+    )
     ap.add_argument(
         '--debug', action='store_true',
         help='More verbose terminal logging'
     )
     args = ap.parse_args(argv)
     start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.raw, args.nsources, args.gen, debug=args.debug)
+              args.raw, args.nsources, args.gen, args.data_like, debug=args.debug)
 
 
 if __name__ == '__main__':
