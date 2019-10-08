@@ -11,8 +11,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 from functools import partial
-from os import uname
-import pickle
+from socket import gethostname
 from time import time
 from threading import Thread
 import copy
@@ -313,7 +312,7 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     generator = generate(det, nsources)
 
     print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
-          uname().nodename, port))
+          gethostname(), port))
 
     t_prev = time()
     n = 0
