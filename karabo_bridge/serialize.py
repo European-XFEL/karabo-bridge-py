@@ -34,14 +34,14 @@ def timestamp():
 
 
 def _serialize_old(data, metadata, dummy_timestamps):
+    """Adapter for backward compatibility with protocol 1.0
+    """
     ts = timestamp()
     new_data = {}
     for src, val in data.items():
         # in version 1.0 metadata is contained in data[src]['metadata']
         # We need to make a copy to not alter the original data dict
         new_data[src] = val.copy()
-        # meta = ts.copy() if dummy_timestamps else {}
-        # meta.update(metadata[src])
         meta = metadata[src].copy()
         if dummy_timestamps and 'timestamp' not in meta:
             meta.update(ts)
@@ -160,6 +160,18 @@ def serialize(data, metadata=None, protocol_version='2.2',
 
 def deserialize(msg):
     """Deserializer for the karabo bridge protocol
+
+    Parameters
+    ----------
+    msg: list of zmq.Frame or list of byte objects
+        Serialized data following the karabo_bridge protocol
+
+    Returns
+    -------
+    data : dict
+        The data for a train, keyed by source name.
+    meta : dict
+        The metadata for a train, keyed by source name.
     """
     unpack = partial(msgpack.loads, raw=False, max_bin_len=0x7fffffff)
 
