@@ -9,11 +9,9 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from functools import partial
-
-import msgpack
-import numpy as np
 import zmq
+
+from .serialize import deserialize
 
 
 __all__ = ['Client']
@@ -85,7 +83,6 @@ class Client:
         self._recv_ready = False
 
         self._pattern = self._socket.TYPE
-        self.unpack = partial(msgpack.loads, raw=False, max_bin_len=0x7fffffff)
 
     def next(self):
         """Request next data container.
@@ -119,33 +116,7 @@ class Client:
                     self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
                     self._socket.getsockopt(zmq.RCVTIMEO)))
         self._recv_ready = False
-        return self._deserialize(msg)
-
-    def _deserialize(self, msg):
-        if len(msg) < 2:  # protocol version 1.0
-            data = self.unpack(msg[-1].bytes)
-            meta = {}
-            for key, value in data.items():
-                meta[key] = value.get('metadata', {})
-            return data, meta
-
-        data = {}
-        meta = {}
-        for header, payload in zip(*[iter(msg)]*2):
-            md = self.unpack(header.bytes)
-            source = md['source']
-            content = md['content']
-
-            if content == 'msgpack':
-                data[source] = self.unpack(payload.bytes)
-                meta[source] = md.get('metadata', {})
-            elif content == 'array':
-                dtype, shape = md['dtype'], md['shape']
-                array = np.frombuffer(payload.buffer, dtype=dtype).reshape(shape)
-                data[source].update({md['path']: array})
-            else:
-                raise RuntimeError('Unknown message: %s' % md['content'])
-        return data, meta
+        return deserialize(msg)
 
     def __enter__(self):
         return self

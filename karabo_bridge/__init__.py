@@ -36,10 +36,11 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 __version__ = "0.4.0"
 
 
+from .cli import *
 from .client import *
 from .simulation import *
-from .cli import *
 
 
 __all__ = (client.__all__ +
-           simulation.__all__)
+           simulation.__all__ +
+           serialize.__all__)

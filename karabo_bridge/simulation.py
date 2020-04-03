@@ -21,6 +21,8 @@ import msgpack_numpy
 import numpy as np
 import zmq
 
+from .serialize import serialize
+
 
 __all__ = ['start_gen']
 
@@ -306,7 +308,6 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
     if ser != 'msgpack':
         raise ValueError("Unknown serialisation format %s" % ser)
-    serialize = partial(msgpack.dumps, use_bin_type=True)
     det = Detector.getDetector(detector, raw=raw, gen=datagen,
                                data_like=data_like)
     generator = generate(det, nsources)
@@ -321,12 +322,15 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         while True:
             msg = socket.recv()
             if msg == b'next':
-                train = next(generator)
-                msg = containize(train, ser, serialize, version)
+                data, meta = next(generator)
+                if version == '1.0':
+                    for key, value in meta.items():
+                        data[key].update({'metadata': value})
+                msg = serialize(data, meta, protocol_version=version)
                 socket.send_multipart(msg, copy=False)
                 if debug:
                     print('Server : emitted train:',
-                          train[1][list(train[1].keys())[0]]['timestamp.tid'])
+                          next(v for v in meta.values())['timestamp.tid'])
                 n += 1
                 if n % TIMING_INTERVAL == 0:
                     t_now = time()
@@ -349,12 +353,10 @@ class ServeInThread(Thread):
                  detector='AGIPD', raw=False, nsources=1,
                  datagen='random', data_like='online'):
         super().__init__()
-        self.protocol_version = protocol_version
 
-        self.serialization_fmt = ser
         if ser != 'msgpack':
             raise ValueError("Unknown serialisation format %s" % ser)
-        self.serialize = partial(msgpack.dumps, use_bin_type=True)
+        self.protocol_version = protocol_version
 
         det = Detector.getDetector(detector, raw=raw, gen=datagen,
                                    data_like=data_like)
@@ -379,9 +381,12 @@ class ServeInThread(Thread):
             if self.server_socket in events:
                 msg = self.server_socket.recv()
                 if msg == b'next':
-                    train = next(self.generator)
-                    msg = containize(train, self.serialization_fmt,
-                                     self.serialize, self.protocol_version)
+                    data, meta = next(self.generator)
+                    if self.protocol_version == '1.0':
+                        for key, value in meta.items():
+                            data[key].update({'metadata': value})
+                    msg = serialize(data, meta,
+                                    protocol_version=self.protocol_version)
                     self.server_socket.send_multipart(msg, copy=False)
                 else:
                     print('Unrecognised request:', msg)
