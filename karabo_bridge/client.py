@@ -11,7 +11,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 
 import zmq
 
-from .serialize import deserialize
+from .serializer import deserialize
 
 
 __all__ = ['Client']

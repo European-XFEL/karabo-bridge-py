@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from karabo_bridge.serialize import serialize, deserialize
+from karabo_bridge import serialize, deserialize
 
 
 @pytest.fixture(scope='session')

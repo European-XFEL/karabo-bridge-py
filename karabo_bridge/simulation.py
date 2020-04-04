@@ -21,7 +21,7 @@ import msgpack_numpy
 import numpy as np
 import zmq
 
-from .serialize import serialize
+from .serializer import serialize
 
 
 __all__ = ['start_gen']
