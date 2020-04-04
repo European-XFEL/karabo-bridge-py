@@ -323,9 +323,6 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
             msg = socket.recv()
             if msg == b'next':
                 data, meta = next(generator)
-                if version == '1.0':
-                    for key, value in meta.items():
-                        data[key].update({'metadata': value})
                 msg = serialize(data, meta, protocol_version=version)
                 socket.send_multipart(msg, copy=False)
                 if debug:
@@ -382,9 +379,6 @@ class ServeInThread(Thread):
                 msg = self.server_socket.recv()
                 if msg == b'next':
                     data, meta = next(self.generator)
-                    if self.protocol_version == '1.0':
-                        for key, value in meta.items():
-                            data[key].update({'metadata': value})
                     msg = serialize(data, meta,
                                     protocol_version=self.protocol_version)
                     self.server_socket.send_multipart(msg, copy=False)

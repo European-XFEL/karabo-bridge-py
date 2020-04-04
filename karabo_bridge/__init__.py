@@ -38,6 +38,7 @@ __version__ = "0.4.0"
 
 from .cli import *
 from .client import *
+from .serialize import *
 from .simulation import *
 
 
