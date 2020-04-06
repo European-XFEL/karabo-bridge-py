@@ -210,57 +210,6 @@ def generate(detector, nsources):
         yield (data, meta)
 
 
-def containize(train_data, ser, ser_func, vers):
-    data, meta = train_data
-
-    if vers not in ('1.0', '2.0', '2.1', '2.2'):
-        raise ValueError("Invalid version %s" % vers)
-
-    if vers in ('1.0', '2.0'):
-        for key, value in meta.items():
-            data[key].update({'metadata': value})
-
-        if vers == '1.0':
-            return [ser_func(data)]
-
-    elif vers == '2.1':
-        for key, value in meta.items():
-            m = {}
-            for mkey, mval in value.items():
-                m['metadata.'+mkey] = mval
-            data[key].update(m)
-
-    newdata = {}
-    for src, props in data.items():
-        arr = {}
-        arr_keys = []
-        for key, value in props.items():
-            if isinstance(value, np.ndarray):
-                arr[key] = props[key]
-                arr_keys.append(key)
-        for arr_key in arr_keys:
-            data[src].pop(arr_key)
-        newdata[src] = (data[src], arr, meta[src])
-
-    msg = []
-    for src, (dic, arr, src_metadata) in newdata.items():
-        header = {'source': src, 'content': str(ser)}
-        if vers == '2.2':
-            header['metadata'] = src_metadata
-        msg.append(ser_func(header))
-        msg.append(ser_func(dic))
-
-        for path, array in arr.items():
-            header = {'source': src, 'content': 'array', 'path': path,
-                      'dtype': str(array.dtype), 'shape': array.shape}
-            msg.append(ser_func(header))
-            if not array.flags['C_CONTIGUOUS']:
-                array = np.ascontiguousarray(array)
-            msg.append(memoryview(array))
-
-    return msg
-
-
 TIMING_INTERVAL = 50
 
 
