@@ -18,8 +18,6 @@ def test_protocol_1(sim_server_version_1):
     data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
-    print(data['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf'].keys())
-    print(metadata)
     assert all('metadata' in src for src in data.values())
 
 
