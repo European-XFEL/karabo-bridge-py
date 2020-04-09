@@ -352,7 +352,11 @@ class ServeInThread(Thread):
                 data, meta = next(self.generator)
                 payload = serialize(data, meta,
                                     protocol_version=self.protocol_version)
-                self.server_socket.send_multipart(payload, copy=False)
+                try:
+                    self.server_socket.send_multipart(payload, copy=False,
+                                                      flags=zmq.NOBLOCK)
+                except zmq.error.Again:
+                    continue
             else:
                 print('Unrecognised request:', msg)
 
