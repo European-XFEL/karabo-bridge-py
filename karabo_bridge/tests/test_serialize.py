@@ -108,3 +108,9 @@ def test_serialize_with_metadata_and_dummy_timestamp(data, metadata, protocol_ve
 
     d, m = deserialize(msg)
     compare_nested_dict(metadata, m)
+
+
+def test_wrong_version(data):
+    with pytest.raises(ValueError):
+        serialize(data, protocol_version='3.0')
+
