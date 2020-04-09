@@ -10,14 +10,11 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from functools import partial
 from socket import gethostname
 from time import time
 from threading import Thread
 import copy
-
-import msgpack
-import msgpack_numpy
+ 
 import numpy as np
 import zmq
 
@@ -25,9 +22,6 @@ from .serializer import serialize
 
 
 __all__ = ['start_gen']
-
-
-msgpack_numpy.patch()
 
 
 class Detector:
@@ -213,7 +207,7 @@ def generate(detector, nsources):
 TIMING_INTERVAL = 50
 
 
-def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
+def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
               raw=False, nsources=1, datagen='random', data_like='online', *,
               debug=True):
     """"Karabo bridge server simulation.
@@ -225,6 +219,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     ----------
     port: str
         The port to on which the server is bound.
+    sock: str, optional
+        socket type - supported: REP, PUB, PUSH. Default is REP.
     ser: str, optional
         The serialization algorithm, default is msgpack.
     version: str, optional
@@ -251,7 +247,14 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
         Default is online.
     """
     context = zmq.Context()
-    socket = context.socket(zmq.REP)
+    if sock == 'REP':
+        socket = context.socket(zmq.REP)
+    elif sock == 'PUB':
+        socket = context.socket(zmq.PUB)
+    elif sock == 'PUSH':
+        socket = context.socket(zmq.PUSH)
+    else:
+        raise ValueError(f'Unsupported socket type: {sock}')
     socket.setsockopt(zmq.LINGER, 0)
     socket.bind('tcp://*:{}'.format(port))
 
@@ -265,15 +268,17 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
           gethostname(), port))
 
     t_prev = time()
+    msg = b'next'
     n = 0
 
     try:
         while True:
-            msg = socket.recv()
+            if socket.type is zmq.REP:
+                msg = socket.recv()
             if msg == b'next':
                 data, meta = next(generator)
-                msg = serialize(data, meta, protocol_version=version)
-                socket.send_multipart(msg, copy=False)
+                payload = serialize(data, meta, protocol_version=version)
+                socket.send_multipart(payload, copy=False)
                 if debug:
                     print('Server : emitted train:',
                           next(v for v in meta.values())['timestamp.tid'])
@@ -295,9 +300,9 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
 
 class ServeInThread(Thread):
-    def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
-                 detector='AGIPD', raw=False, nsources=1,
-                 datagen='random', data_like='online'):
+    def __init__(self, endpoint, sock='REP', ser='msgpack',
+                 protocol_version='2.2', detector='AGIPD', raw=False,
+                 nsources=1, datagen='random', data_like='online'):
         super().__init__()
 
         if ser != 'msgpack':
@@ -309,7 +314,14 @@ class ServeInThread(Thread):
         self.generator = generate(det, nsources)
 
         self.zmq_context = zmq.Context()
-        self.server_socket = self.zmq_context.socket(zmq.REP)
+        if sock == 'REP':
+            self.server_socket = self.zmq_context.socket(zmq.REP)
+        elif sock == 'PUB':
+            self.server_socket = self.zmq_context.socket(zmq.PUB)
+        elif sock == 'PUSH':
+            self.server_socket = self.zmq_context.socket(zmq.PUSH)
+        else:
+            raise ValueError(f'Unsupported socket type: {sock}')
         self.server_socket.setsockopt(zmq.LINGER, 0)
         self.server_socket.bind(endpoint)
 
@@ -322,20 +334,27 @@ class ServeInThread(Thread):
         poller = zmq.Poller()
         poller.register(self.server_socket, zmq.POLLIN)
         poller.register(self.stopper_r, zmq.POLLIN)
+        msg = b'next'
         while True:
-            events = dict(poller.poll())
-            if self.server_socket in events:
-                msg = self.server_socket.recv()
-                if msg == b'next':
-                    data, meta = next(self.generator)
-                    msg = serialize(data, meta,
-                                    protocol_version=self.protocol_version)
-                    self.server_socket.send_multipart(msg, copy=False)
-                else:
-                    print('Unrecognised request:', msg)
-            elif self.stopper_r in events:
+            events = dict(poller.poll(100))
+
+            if self.stopper_r in events:
                 self.stopper_r.recv()
                 break
+
+            if self.server_socket.type is zmq.REP:
+                if self.server_socket in events:
+                    msg = self.server_socket.recv()
+                else:
+                    continue
+
+            if msg == b'next':
+                data, meta = next(self.generator)
+                payload = serialize(data, meta,
+                                    protocol_version=self.protocol_version)
+                self.server_socket.send_multipart(payload, copy=False)
+            else:
+                print('Unrecognised request:', msg)
 
     def stop(self):
         self.stopper_w.send(b'')

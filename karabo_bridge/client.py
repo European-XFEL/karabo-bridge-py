@@ -66,17 +66,18 @@ class Client:
         self._context = context or zmq.Context()
         self._socket = None
 
-        if sock == 'REQ':
+        if sock == 'PULL':
+            self._socket = self._context.socket(zmq.PULL)
+        elif sock == 'REQ':
             self._socket = self._context.socket(zmq.REQ)
-            self._socket.setsockopt(zmq.LINGER, 0)
-            self._socket.connect(endpoint)
         elif sock == 'SUB':
             self._socket = self._context.socket(zmq.SUB)
-            self._socket.set_hwm(1)
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
-            self._socket.connect(endpoint)
         else:
             raise NotImplementedError('Unsupported socket: %s' % str(sock))
+        self._socket.setsockopt(zmq.LINGER, 0)
+        self._socket.set_hwm(1)
+        self._socket.connect(endpoint)
 
         if timeout is not None:
             self._socket.setsockopt(zmq.RCVTIMEO, int(timeout * 1000))

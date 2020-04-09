@@ -77,6 +77,7 @@ def test_serialize(data, protocol_version):
 
     d, m = deserialize(msg)
     compare_nested_dict(data, d)
+
     assert m['source1'] == {'timestamp.tid': 9876543210, 'timestamp': 12345678}
     assert m['XMPL/DET/MOD0'] == {}
 
