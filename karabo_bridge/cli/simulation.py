@@ -12,8 +12,8 @@ def main(argv=None):
         'port', help="TCP port the server will bind"
     )
     ap.add_argument(
-        '--sock', default='REP', choices=['REP', 'PUB', 'PUSH'],
-        help="socket type (Default: REP)"
+        '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+        help='Socket type used by the karabo bridge server (default REP)'
     )
     ap.add_argument(
         '-d', '--detector', default='AGIPD', choices=['AGIPD', 'AGIPDModule',

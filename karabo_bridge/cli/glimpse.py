@@ -175,15 +175,17 @@ def main(argv=None):
                     "structure. optionally: save its data to an HDF5 file.")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
-    ap.add_argument('--sock', default='REQ', choices=['REQ', 'SUB', 'PULL'],
-                    help='Socket type (default REQ)')
+    ap.add_argument('--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+                    help='Socket type used by the karabo bridge server (default REP)')
     ap.add_argument('-s', '--save', action='store_true',
                     help='Save the received train data to a HDF5 file')
     ap.add_argument('-v', '--verbose', action='count', default=0,
                     help='Select verbosity (-vv for most verbose)')
     args = ap.parse_args(argv)
 
-    client = Client(args.endpoint, sock=args.sock)
+    # we use the fittin client associated socket
+    socket_map = {'REP': 'REQ', 'PUB': 'SUB', 'PUSH': 'PULL'}
+    client = Client(args.endpoint, sock=socket_map[args.server_socket])
     data, _ = print_one_train(client, verbosity=args.verbose + 1)
 
     if args.save:
