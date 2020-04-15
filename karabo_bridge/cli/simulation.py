@@ -52,7 +52,7 @@ def main(argv=None):
         help='More verbose terminal logging'
     )
     args = ap.parse_args(argv)
-    start_gen(args.port, args.sock, args.serialisation, args.protocol,
+    start_gen(args.port, args.server_socket, args.serialisation, args.protocol,
               args.detector, args.raw, args.nsources, args.gen, args.data_like,
               debug=args.debug)
 

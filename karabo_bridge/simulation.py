@@ -10,11 +10,12 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
+import copy
+import signal
 from socket import gethostname
 from time import time
 from threading import Thread
-import copy
- 
+
 import numpy as np
 import zmq
 
@@ -210,7 +211,7 @@ TIMING_INTERVAL = 50
 def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
               raw=False, nsources=1, datagen='random', data_like='online', *,
               debug=True):
-    """"Karabo bridge server simulation.
+    """Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
     either AGIPD or LPD.
@@ -246,63 +247,22 @@ def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
 
         Default is online.
     """
-    context = zmq.Context()
-    if sock == 'REP':
-        socket = context.socket(zmq.REP)
-    elif sock == 'PUB':
-        socket = context.socket(zmq.PUB)
-    elif sock == 'PUSH':
-        socket = context.socket(zmq.PUSH)
-    else:
-        raise ValueError(f'Unsupported socket type: {sock}')
-    socket.setsockopt(zmq.LINGER, 0)
-    socket.bind('tcp://*:{}'.format(port))
-
-    if ser != 'msgpack':
-        raise ValueError("Unknown serialisation format %s" % ser)
-    det = Detector.getDetector(detector, raw=raw, gen=datagen,
-                               data_like=data_like)
-    generator = generate(det, nsources)
-
-    print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
-          gethostname(), port))
-
-    t_prev = time()
-    msg = b'next'
-    n = 0
-
-    try:
-        while True:
-            if socket.type is zmq.REP:
-                msg = socket.recv()
-            if msg == b'next':
-                data, meta = next(generator)
-                payload = serialize(data, meta, protocol_version=version)
-                socket.send_multipart(payload, copy=False)
-                if debug:
-                    print('Server : emitted train:',
-                          next(v for v in meta.values())['timestamp.tid'])
-                n += 1
-                if n % TIMING_INTERVAL == 0:
-                    t_now = time()
-                    print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
-                          ''.format(TIMING_INTERVAL, t_now - t_prev,
-                                    TIMING_INTERVAL / (t_now - t_prev)))
-                    t_prev = t_now
-            else:
-                print('wrong request')
-                break
-    except KeyboardInterrupt:
-        print('\nStopped.')
-    finally:
-        socket.close()
-        context.destroy()
+    endpoint = f'tcp://*:{port}'
+    with ServeInThread(endpoint, sock=sock, ser=ser, protocol_version=version,
+                       detector=detector, raw=raw, nsources=nsources,
+                       datagen=datagen, data_like=data_like, debug=debug):
+        try:
+            signal.pause()
+        except KeyboardInterrupt:
+            pass
+    print('\nStopped.')
 
 
 class ServeInThread(Thread):
     def __init__(self, endpoint, sock='REP', ser='msgpack',
                  protocol_version='2.2', detector='AGIPD', raw=False,
-                 nsources=1, datagen='random', data_like='online'):
+                 nsources=1, datagen='random', data_like='online', *,
+                 debug=True):
         super().__init__()
 
         if ser != 'msgpack':
@@ -323,6 +283,7 @@ class ServeInThread(Thread):
         else:
             raise ValueError(f'Unsupported socket type: {sock}')
         self.server_socket.setsockopt(zmq.LINGER, 0)
+        self.server_socket.set_hwm(1)
         self.server_socket.bind(endpoint)
 
         self.stopper_r = self.zmq_context.socket(zmq.PAIR)
@@ -330,43 +291,62 @@ class ServeInThread(Thread):
         self.stopper_w = self.zmq_context.socket(zmq.PAIR)
         self.stopper_w.connect('inproc://sim-server-stop')
 
+        self.debug = debug
+
     def run(self):
         poller = zmq.Poller()
-        poller.register(self.server_socket, zmq.POLLIN)
+        poller.register(self.server_socket, zmq.POLLIN | zmq.POLLOUT)
         poller.register(self.stopper_r, zmq.POLLIN)
-        msg = b'next'
-        while True:
-            events = dict(poller.poll(100))
 
+        t_prev = time()
+        n = 0
+
+        while True:
+            events = dict(poller.poll())
+
+            if not events:
+                continue
             if self.stopper_r in events:
                 self.stopper_r.recv()
                 break
-
-            if self.server_socket.type is zmq.REP:
-                if self.server_socket in events:
-                    msg = self.server_socket.recv()
-                else:
+            if events[self.server_socket] is zmq.POLLIN:
+                msg = self.server_socket.recv()
+                if msg != b'next':
+                    print(f'Unrecognised request: {msg}')
                     continue
 
-            if msg == b'next':
-                data, meta = next(self.generator)
-                payload = serialize(data, meta,
-                                    protocol_version=self.protocol_version)
-                try:
-                    self.server_socket.send_multipart(payload, copy=False,
-                                                      flags=zmq.NOBLOCK)
-                except zmq.error.Again:
-                    continue
-            else:
-                print('Unrecognised request:', msg)
+            data, meta = next(self.generator)
+            payload = serialize(data, meta,
+                                protocol_version=self.protocol_version)
+            try:
+                self.server_socket.send_multipart(payload, copy=False,
+                                                  flags=zmq.NOBLOCK)
+            except zmq.error.Again:
+                continue
+
+            if self.debug:
+                print('Server : emitted train:',
+                      next(v for v in meta.values())['timestamp.tid'])
+            n += 1
+            if n % TIMING_INTERVAL == 0:
+                t_now = time()
+                print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
+                      ''.format(TIMING_INTERVAL, t_now - t_prev,
+                                TIMING_INTERVAL / (t_now - t_prev)))
+                t_prev = t_now
 
     def stop(self):
         self.stopper_w.send(b'')
         self.join()
-        self.zmq_context.destroy()
+        self.zmq_context.destroy(linger=0)
 
     def __enter__(self):
         self.start()
+
+        endpoint = self.server_socket.getsockopt_string(zmq.LAST_ENDPOINT)
+        port = endpoint.rpartition(':')[-1]
+        print(f'Simulated Karabo-bridge server started on:\n'
+              f'tcp://{gethostname()}:{port}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
