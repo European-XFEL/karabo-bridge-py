@@ -322,6 +322,7 @@ class ServeInThread(Thread):
                 msg = self.server_socket.recv()
                 if msg != b'next':
                     print(f'Unrecognised request: {msg}')
+                    self.server_socket.send(b'Error: bad request %b' % msg)
                     continue
 
             self.server_socket.send_multipart(payload, copy=False)
