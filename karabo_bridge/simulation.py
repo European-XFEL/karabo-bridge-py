@@ -11,7 +11,6 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 import copy
-import signal
 from socket import gethostname
 from time import time
 from threading import Thread
