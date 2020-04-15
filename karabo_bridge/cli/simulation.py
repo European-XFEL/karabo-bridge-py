@@ -12,7 +12,7 @@ def main(argv=None):
         'port', help="TCP port the server will bind"
     )
     ap.add_argument(
-        '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+        '-z', '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
         help='Socket type used by the karabo bridge server (default REP)'
     )
     ap.add_argument(

@@ -175,7 +175,7 @@ def main(argv=None):
                     "structure. optionally: save its data to an HDF5 file.")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
-    ap.add_argument('--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+    ap.add_argument('-z', '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
                     help='Socket type used by the karabo bridge server (default REP)')
     ap.add_argument('-s', '--save', action='store_true',
                     help='Save the received train data to a HDF5 file')

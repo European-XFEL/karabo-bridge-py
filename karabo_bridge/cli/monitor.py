@@ -14,7 +14,7 @@ def main(argv=None):
         description="Monitor data from a Karabo bridge server")
     ap.add_argument('endpoint',
                     help="ZMQ address to connect to, e.g. 'tcp://localhost:4545'")
-    ap.add_argument('--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+    ap.add_argument('-z', '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
                     help='Socket type used by the karabo bridge server (default REP)')
     ap.add_argument('-v', '--verbose', action='count', default=0,
                     help='Select verbosity (-vvv for most verbose)')
