@@ -304,8 +304,6 @@ class ServeInThread(Thread):
         while True:
             events = dict(poller.poll())
 
-            if not events:
-                continue
             if self.stopper_r in events:
                 self.stopper_r.recv()
                 break
