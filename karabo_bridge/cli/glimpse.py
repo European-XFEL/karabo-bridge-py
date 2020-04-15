@@ -183,7 +183,7 @@ def main(argv=None):
                     help='Select verbosity (-vv for most verbose)')
     args = ap.parse_args(argv)
 
-    # we use the fittin client associated socket
+    # use the appropriate client socket type to match the server
     socket_map = {'REP': 'REQ', 'PUB': 'SUB', 'PUSH': 'PULL'}
     client = Client(args.endpoint, sock=socket_map[args.server_socket])
     data, _ = print_one_train(client, verbosity=args.verbose + 1)
