@@ -248,13 +248,15 @@ def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
         Default is online.
     """
     endpoint = f'tcp://*:{port}'
-    with ServeInThread(endpoint, sock=sock, ser=ser, protocol_version=version,
-                       detector=detector, raw=raw, nsources=nsources,
-                       datagen=datagen, data_like=data_like, debug=debug):
-        try:
-            signal.pause()
-        except KeyboardInterrupt:
-            pass
+    server = ServeInThread(
+        endpoint, sock=sock, ser=ser, protocol_version=version,
+        detector=detector, raw=raw, nsources=nsources, datagen=datagen,
+        data_like=data_like, debug=debug
+    )
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        pass
     print('\nStopped.')
 
 
@@ -298,10 +300,19 @@ class ServeInThread(Thread):
         poller.register(self.server_socket, zmq.POLLIN | zmq.POLLOUT)
         poller.register(self.stopper_r, zmq.POLLIN)
 
+        endpoint = self.server_socket.getsockopt_string(zmq.LAST_ENDPOINT)
+        port = endpoint.rpartition(':')[-1]
+        print(f'Simulated Karabo-bridge server started on:\n'
+              f'tcp://{gethostname()}:{port}')
+
         t_prev = time()
         n = 0
 
         while True:
+            data, meta = next(self.generator)
+            payload = serialize(data, meta,
+                                protocol_version=self.protocol_version)
+
             events = dict(poller.poll())
 
             if self.stopper_r in events:
@@ -313,14 +324,7 @@ class ServeInThread(Thread):
                     print(f'Unrecognised request: {msg}')
                     continue
 
-            data, meta = next(self.generator)
-            payload = serialize(data, meta,
-                                protocol_version=self.protocol_version)
-            try:
-                self.server_socket.send_multipart(payload, copy=False,
-                                                  flags=zmq.NOBLOCK)
-            except zmq.error.Again:
-                continue
+            self.server_socket.send_multipart(payload, copy=False)
 
             if self.debug:
                 print('Server : emitted train:',
@@ -340,11 +344,6 @@ class ServeInThread(Thread):
 
     def __enter__(self):
         self.start()
-
-        endpoint = self.server_socket.getsockopt_string(zmq.LAST_ENDPOINT)
-        port = endpoint.rpartition(':')[-1]
-        print(f'Simulated Karabo-bridge server started on:\n'
-              f'tcp://{gethostname()}:{port}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
