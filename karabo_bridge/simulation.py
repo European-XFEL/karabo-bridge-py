@@ -207,65 +207,11 @@ def generate(detector, nsources):
 TIMING_INTERVAL = 50
 
 
-def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
-              raw=False, nsources=1, datagen='random', data_like='online', *,
-              debug=True):
-    """Karabo bridge server simulation.
-
-    Simulate a Karabo Bridge server and send random data from a detector,
-    either AGIPD or LPD.
-
-    Parameters
-    ----------
-    port: str
-        The port to on which the server is bound.
-    sock: str, optional
-        socket type - supported: REP, PUB, PUSH. Default is REP.
-    ser: str, optional
-        The serialization algorithm, default is msgpack.
-    version: str, optional
-        The container version of the serialized data.
-    detector: str, optional
-        The data format to send, default is AGIPD detector.
-    raw: bool, optional
-        Generate raw data output if True, else CORRECTED. Default is False.
-    nsources: int, optional
-        Number of sources.
-    datagen: string, optional
-        Generator function used to generate detector data. Default is random.
-    data_like: string optional ['online', 'file']
-        Data array axes ordering for Mhz detector.
-        The data arrays's axes can have different ordering on online data. The
-        calibration processing orders axes as (fs, ss, pulses), whereas
-        data in files have (pulses, ss, fs).
-        This option allow to chose between 2 ordering:
-        - online: (modules, fs, ss, pulses)
-        - file: (pulses, modules, ss, fs)
-        Note that the real system can send data in both shape with a
-        performance penalty for the file-like array shape.
-
-        Default is online.
-    """
-    endpoint = f'tcp://*:{port}'
-    server = ServeInThread(
-        endpoint, sock=sock, ser=ser, protocol_version=version,
-        detector=detector, raw=raw, nsources=nsources, datagen=datagen,
-        data_like=data_like, debug=debug
-    )
-    try:
-        server.run()
-    except KeyboardInterrupt:
-        pass
-    print('\nStopped.')
-
-
-class ServeInThread(Thread):
+class Sender:
     def __init__(self, endpoint, sock='REP', ser='msgpack',
                  protocol_version='2.2', detector='AGIPD', raw=False,
                  nsources=1, datagen='random', data_like='online', *,
                  debug=True):
-        super().__init__()
-
         if ser != 'msgpack':
             raise ValueError("Unknown serialisation format %s" % ser)
         self.protocol_version = protocol_version
@@ -294,7 +240,7 @@ class ServeInThread(Thread):
 
         self.debug = debug
 
-    def run(self):
+    def loop(self):
         poller = zmq.Poller()
         poller.register(self.server_socket, zmq.POLLIN | zmq.POLLOUT)
         poller.register(self.stopper_r, zmq.POLLIN)
@@ -337,10 +283,79 @@ class ServeInThread(Thread):
                                 TIMING_INTERVAL / (t_now - t_prev)))
                 t_prev = t_now
 
+
+def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
+              raw=False, nsources=1, datagen='random', data_like='online', *,
+              debug=True):
+    """Karabo bridge server simulation.
+
+    Simulate a Karabo Bridge server and send random data from a detector,
+    either AGIPD or LPD.
+
+    Parameters
+    ----------
+    port: str
+        The port to on which the server is bound.
+    sock: str, optional
+        socket type - supported: REP, PUB, PUSH. Default is REP.
+    ser: str, optional
+        The serialization algorithm, default is msgpack.
+    version: str, optional
+        The container version of the serialized data.
+    detector: str, optional
+        The data format to send, default is AGIPD detector.
+    raw: bool, optional
+        Generate raw data output if True, else CORRECTED. Default is False.
+    nsources: int, optional
+        Number of sources.
+    datagen: string, optional
+        Generator function used to generate detector data. Default is random.
+    data_like: string optional ['online', 'file']
+        Data array axes ordering for Mhz detector.
+        The data arrays's axes can have different ordering on online data. The
+        calibration processing orders axes as (fs, ss, pulses), whereas
+        data in files have (pulses, ss, fs).
+        This option allow to chose between 2 ordering:
+        - online: (modules, fs, ss, pulses)
+        - file: (pulses, modules, ss, fs)
+        Note that the real system can send data in both shape with a
+        performance penalty for the file-like array shape.
+
+        Default is online.
+    """
+    endpoint = f'tcp://*:{port}'
+    sender = Sender(
+        endpoint, sock=sock, ser=ser, protocol_version=version,
+        detector=detector, raw=raw, nsources=nsources, datagen=datagen,
+        data_like=data_like, debug=debug
+    )
+    try:
+        sender.loop()
+    except KeyboardInterrupt:
+        pass
+    print('\nStopped.')
+
+
+class ServeInThread(Thread):
+    def __init__(self, endpoint, sock='REP', ser='msgpack',
+                 protocol_version='2.2', detector='AGIPD', raw=False,
+                 nsources=1, datagen='random', data_like='online', *,
+                 debug=True):
+        super().__init__()
+
+        self.sender = Sender(
+            endpoint, sock=sock, ser=ser, protocol_version=protocol_version,
+            detector=detector, raw=raw, nsources=nsources, datagen=datagen,
+            data_like=data_like, debug=debug
+        )
+
+    def run(self):
+        self.sender.loop()
+
     def stop(self):
-        self.stopper_w.send(b'')
+        self.sender.stopper_w.send(b'')
         self.join()
-        self.zmq_context.destroy(linger=0)
+        self.sender.zmq_context.destroy(linger=0)
 
     def __enter__(self):
         self.start()
