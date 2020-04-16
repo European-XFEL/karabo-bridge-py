@@ -12,6 +12,10 @@ def main(argv=None):
         'port', help="TCP port the server will bind"
     )
     ap.add_argument(
+        '-z', '--server-socket', default='REP', choices=['REP', 'PUB', 'PUSH'],
+        help='Socket type used by the karabo bridge server (default REP)'
+    )
+    ap.add_argument(
         '-d', '--detector', default='AGIPD', choices=['AGIPD', 'AGIPDModule',
                                                       'LPD'],
         help="Which kind of detector to simulate (default: AGIPD)"
@@ -48,8 +52,9 @@ def main(argv=None):
         help='More verbose terminal logging'
     )
     args = ap.parse_args(argv)
-    start_gen(args.port, args.serialisation, args.protocol, args.detector,
-              args.raw, args.nsources, args.gen, args.data_like, debug=args.debug)
+    start_gen(args.port, args.server_socket, args.serialisation, args.protocol,
+              args.detector, args.raw, args.nsources, args.gen, args.data_like,
+              debug=args.debug)
 
 
 if __name__ == '__main__':

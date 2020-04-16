@@ -179,7 +179,7 @@ def deserialize(msg):
         msg = [Frame(m) for m in msg]
 
     if len(msg) < 2:  # protocol version 1.0
-        data = unpack(msg[-1].bytes)
+        data = unpack(msg[-1].bytes, object_hook=msgpack_numpy.decode)
         meta = {}
         for key, value in data.items():
             meta[key] = value.get('metadata', {})

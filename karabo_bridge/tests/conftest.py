@@ -19,3 +19,12 @@ def sim_server_version_1():
         with ServeInThread(endpoint, detector='AGIPDModule', raw=True,
                            protocol_version='1.0'):
             yield endpoint
+
+
+@pytest.fixture
+def sim_push_server():
+    with TemporaryDirectory() as td:
+        endpoint = "ipc://{}/push".format(td)
+        with ServeInThread(endpoint, sock='PUSH', detector='AGIPDModule',
+                           raw=True):
+            yield endpoint

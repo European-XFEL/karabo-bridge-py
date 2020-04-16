@@ -1,6 +1,5 @@
 from itertools import islice
 
-import numpy as np
 import pytest
 
 from karabo_bridge import Client
@@ -21,9 +20,16 @@ def test_protocol_1(sim_server_version_1):
     assert all('metadata' in src for src in data.values())
 
 
-def test_pull_socket(sim_server):
-    with pytest.raises(NotImplementedError) as info:
-        c = Client(sim_server, sock='PULL')
+def test_pull_socket(sim_push_server):
+    c = Client(sim_push_server, sock='PULL')
+    data, metadata = c.next()
+    assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
+    assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
+
+
+def test_pair_socket(sim_server):
+    with pytest.raises(NotImplementedError):
+        c = Client(sim_server, sock='PAIR')
 
 
 def test_context_manager(sim_server):

@@ -10,14 +10,11 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
-from functools import partial
+import copy
 from socket import gethostname
 from time import time
 from threading import Thread
-import copy
 
-import msgpack
-import msgpack_numpy
 import numpy as np
 import zmq
 
@@ -25,9 +22,6 @@ from .serializer import serialize
 
 
 __all__ = ['start_gen']
-
-
-msgpack_numpy.patch()
 
 
 class Detector:
@@ -213,10 +207,87 @@ def generate(detector, nsources):
 TIMING_INTERVAL = 50
 
 
-def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
+class Sender:
+    def __init__(self, endpoint, sock='REP', ser='msgpack',
+                 protocol_version='2.2', detector='AGIPD', raw=False,
+                 nsources=1, datagen='random', data_like='online', *,
+                 debug=True):
+        if ser != 'msgpack':
+            raise ValueError("Unknown serialisation format %s" % ser)
+        self.protocol_version = protocol_version
+
+        det = Detector.getDetector(detector, raw=raw, gen=datagen,
+                                   data_like=data_like)
+        self.generator = generate(det, nsources)
+
+        self.zmq_context = zmq.Context()
+        if sock == 'REP':
+            self.server_socket = self.zmq_context.socket(zmq.REP)
+        elif sock == 'PUB':
+            self.server_socket = self.zmq_context.socket(zmq.PUB)
+        elif sock == 'PUSH':
+            self.server_socket = self.zmq_context.socket(zmq.PUSH)
+        else:
+            raise ValueError(f'Unsupported socket type: {sock}')
+        self.server_socket.setsockopt(zmq.LINGER, 0)
+        self.server_socket.set_hwm(1)
+        self.server_socket.bind(endpoint)
+
+        self.stopper_r = self.zmq_context.socket(zmq.PAIR)
+        self.stopper_r.bind('inproc://sim-server-stop')
+        self.stopper_w = self.zmq_context.socket(zmq.PAIR)
+        self.stopper_w.connect('inproc://sim-server-stop')
+
+        self.debug = debug
+
+    def loop(self):
+        poller = zmq.Poller()
+        poller.register(self.server_socket, zmq.POLLIN | zmq.POLLOUT)
+        poller.register(self.stopper_r, zmq.POLLIN)
+
+        endpoint = self.server_socket.getsockopt_string(zmq.LAST_ENDPOINT)
+        port = endpoint.rpartition(':')[-1]
+        print(f'Simulated Karabo-bridge server started on:\n'
+              f'tcp://{gethostname()}:{port}')
+
+        t_prev = time()
+        n = 0
+
+        while True:
+            data, meta = next(self.generator)
+            payload = serialize(data, meta,
+                                protocol_version=self.protocol_version)
+
+            events = dict(poller.poll())
+
+            if self.stopper_r in events:
+                self.stopper_r.recv()
+                break
+            if events[self.server_socket] is zmq.POLLIN:
+                msg = self.server_socket.recv()
+                if msg != b'next':
+                    print(f'Unrecognised request: {msg}')
+                    self.server_socket.send(b'Error: bad request %b' % msg)
+                    continue
+
+            self.server_socket.send_multipart(payload, copy=False)
+
+            if self.debug:
+                print('Server : emitted train:',
+                      next(v for v in meta.values())['timestamp.tid'])
+            n += 1
+            if n % TIMING_INTERVAL == 0:
+                t_now = time()
+                print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
+                      ''.format(TIMING_INTERVAL, t_now - t_prev,
+                                TIMING_INTERVAL / (t_now - t_prev)))
+                t_prev = t_now
+
+
+def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
               raw=False, nsources=1, datagen='random', data_like='online', *,
               debug=True):
-    """"Karabo bridge server simulation.
+    """Karabo bridge server simulation.
 
     Simulate a Karabo Bridge server and send random data from a detector,
     either AGIPD or LPD.
@@ -225,6 +296,8 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
     ----------
     port: str
         The port to on which the server is bound.
+    sock: str, optional
+        socket type - supported: REP, PUB, PUSH. Default is REP.
     ser: str, optional
         The serialization algorithm, default is msgpack.
     version: str, optional
@@ -250,97 +323,39 @@ def start_gen(port, ser='msgpack', version='2.2', detector='AGIPD',
 
         Default is online.
     """
-    context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.setsockopt(zmq.LINGER, 0)
-    socket.bind('tcp://*:{}'.format(port))
-
-    if ser != 'msgpack':
-        raise ValueError("Unknown serialisation format %s" % ser)
-    det = Detector.getDetector(detector, raw=raw, gen=datagen,
-                               data_like=data_like)
-    generator = generate(det, nsources)
-
-    print('Simulated Karabo-bridge server started on:\ntcp://{}:{}'.format(
-          gethostname(), port))
-
-    t_prev = time()
-    n = 0
-
+    endpoint = f'tcp://*:{port}'
+    sender = Sender(
+        endpoint, sock=sock, ser=ser, protocol_version=version,
+        detector=detector, raw=raw, nsources=nsources, datagen=datagen,
+        data_like=data_like, debug=debug
+    )
     try:
-        while True:
-            msg = socket.recv()
-            if msg == b'next':
-                data, meta = next(generator)
-                msg = serialize(data, meta, protocol_version=version)
-                socket.send_multipart(msg, copy=False)
-                if debug:
-                    print('Server : emitted train:',
-                          next(v for v in meta.values())['timestamp.tid'])
-                n += 1
-                if n % TIMING_INTERVAL == 0:
-                    t_now = time()
-                    print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
-                          ''.format(TIMING_INTERVAL, t_now - t_prev,
-                                    TIMING_INTERVAL / (t_now - t_prev)))
-                    t_prev = t_now
-            else:
-                print('wrong request')
-                break
+        sender.loop()
     except KeyboardInterrupt:
-        print('\nStopped.')
-    finally:
-        socket.close()
-        context.destroy()
+        pass
+    print('\nStopped.')
 
 
 class ServeInThread(Thread):
-    def __init__(self, endpoint, ser='msgpack', protocol_version='2.2',
-                 detector='AGIPD', raw=False, nsources=1,
-                 datagen='random', data_like='online'):
+    def __init__(self, endpoint, sock='REP', ser='msgpack',
+                 protocol_version='2.2', detector='AGIPD', raw=False,
+                 nsources=1, datagen='random', data_like='online', *,
+                 debug=True):
         super().__init__()
 
-        if ser != 'msgpack':
-            raise ValueError("Unknown serialisation format %s" % ser)
-        self.protocol_version = protocol_version
-
-        det = Detector.getDetector(detector, raw=raw, gen=datagen,
-                                   data_like=data_like)
-        self.generator = generate(det, nsources)
-
-        self.zmq_context = zmq.Context()
-        self.server_socket = self.zmq_context.socket(zmq.REP)
-        self.server_socket.setsockopt(zmq.LINGER, 0)
-        self.server_socket.bind(endpoint)
-
-        self.stopper_r = self.zmq_context.socket(zmq.PAIR)
-        self.stopper_r.bind('inproc://sim-server-stop')
-        self.stopper_w = self.zmq_context.socket(zmq.PAIR)
-        self.stopper_w.connect('inproc://sim-server-stop')
+        self.sender = Sender(
+            endpoint, sock=sock, ser=ser, protocol_version=protocol_version,
+            detector=detector, raw=raw, nsources=nsources, datagen=datagen,
+            data_like=data_like, debug=debug
+        )
 
     def run(self):
-        poller = zmq.Poller()
-        poller.register(self.server_socket, zmq.POLLIN)
-        poller.register(self.stopper_r, zmq.POLLIN)
-        while True:
-            events = dict(poller.poll())
-            if self.server_socket in events:
-                msg = self.server_socket.recv()
-                if msg == b'next':
-                    data, meta = next(self.generator)
-                    msg = serialize(data, meta,
-                                    protocol_version=self.protocol_version)
-                    self.server_socket.send_multipart(msg, copy=False)
-                else:
-                    print('Unrecognised request:', msg)
-            elif self.stopper_r in events:
-                self.stopper_r.recv()
-                break
+        self.sender.loop()
 
     def stop(self):
-        self.stopper_w.send(b'')
+        self.sender.stopper_w.send(b'')
         self.join()
-        self.zmq_context.destroy()
+        self.sender.zmq_context.destroy(linger=0)
 
     def __enter__(self):
         self.start()
