@@ -11,17 +11,9 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 import copy
-from socket import gethostname
 from time import time
-from threading import Thread
 
 import numpy as np
-import zmq
-
-from .serializer import serialize
-
-
-__all__ = ['start_gen']
 
 
 class Detector:
@@ -185,14 +177,23 @@ class LPD(Detector):
     ])
 
 
-def generate(detector, nsources):
-    tid_counter = 10000000000
-    while True:
-        data, meta = detector.gen_data(tid_counter)
+class DataGenerator:
+    def __init__(self, detector='AGIPD', raw=False, nsources=1,
+                 datagen='random', data_like='online', *, debug=False):
+        self.detector = Detector.getDetector(
+            detector, raw=raw, gen=datagen, data_like=data_like)
+        self.nsources = nsources
+        self.tid_counter = 10000000000
 
-        if nsources > 1:
-            source = detector.source
-            for i in range(nsources):
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        data, meta = self.detector.gen_data(self.tid_counter)
+
+        if self.nsources > 1:
+            source = self.detector.source
+            for i in range(self.nsources):
                 src = source + "-" + str(i+1)
                 data[src] = copy.deepcopy(data[source])
                 meta[src] = copy.deepcopy(meta[source])
@@ -200,165 +201,7 @@ def generate(detector, nsources):
             del data[source]
             del meta[source]
 
-        tid_counter += 1
-        yield (data, meta)
+        self.tid_counter += 1
+        return data, meta
 
 
-TIMING_INTERVAL = 50
-
-
-class Sender:
-    def __init__(self, endpoint, sock='REP', ser='msgpack',
-                 protocol_version='2.2', detector='AGIPD', raw=False,
-                 nsources=1, datagen='random', data_like='online', *,
-                 debug=True):
-        if ser != 'msgpack':
-            raise ValueError("Unknown serialisation format %s" % ser)
-        self.protocol_version = protocol_version
-
-        det = Detector.getDetector(detector, raw=raw, gen=datagen,
-                                   data_like=data_like)
-        self.generator = generate(det, nsources)
-
-        self.zmq_context = zmq.Context()
-        if sock == 'REP':
-            self.server_socket = self.zmq_context.socket(zmq.REP)
-        elif sock == 'PUB':
-            self.server_socket = self.zmq_context.socket(zmq.PUB)
-        elif sock == 'PUSH':
-            self.server_socket = self.zmq_context.socket(zmq.PUSH)
-        else:
-            raise ValueError(f'Unsupported socket type: {sock}')
-        self.server_socket.setsockopt(zmq.LINGER, 0)
-        self.server_socket.set_hwm(1)
-        self.server_socket.bind(endpoint)
-
-        self.stopper_r = self.zmq_context.socket(zmq.PAIR)
-        self.stopper_r.bind('inproc://sim-server-stop')
-        self.stopper_w = self.zmq_context.socket(zmq.PAIR)
-        self.stopper_w.connect('inproc://sim-server-stop')
-
-        self.debug = debug
-
-    def loop(self):
-        poller = zmq.Poller()
-        poller.register(self.server_socket, zmq.POLLIN | zmq.POLLOUT)
-        poller.register(self.stopper_r, zmq.POLLIN)
-
-        endpoint = self.server_socket.getsockopt_string(zmq.LAST_ENDPOINT)
-        port = endpoint.rpartition(':')[-1]
-        print(f'Simulated Karabo-bridge server started on:\n'
-              f'tcp://{gethostname()}:{port}')
-
-        t_prev = time()
-        n = 0
-
-        while True:
-            data, meta = next(self.generator)
-            payload = serialize(data, meta,
-                                protocol_version=self.protocol_version)
-
-            events = dict(poller.poll())
-
-            if self.stopper_r in events:
-                self.stopper_r.recv()
-                break
-            if events[self.server_socket] is zmq.POLLIN:
-                msg = self.server_socket.recv()
-                if msg != b'next':
-                    print(f'Unrecognised request: {msg}')
-                    self.server_socket.send(b'Error: bad request %b' % msg)
-                    continue
-
-            self.server_socket.send_multipart(payload, copy=False)
-
-            if self.debug:
-                print('Server : emitted train:',
-                      next(v for v in meta.values())['timestamp.tid'])
-            n += 1
-            if n % TIMING_INTERVAL == 0:
-                t_now = time()
-                print('Sent {} trains in {:.2f} seconds ({:.2f} Hz)'
-                      ''.format(TIMING_INTERVAL, t_now - t_prev,
-                                TIMING_INTERVAL / (t_now - t_prev)))
-                t_prev = t_now
-
-
-def start_gen(port, sock='REP', ser='msgpack', version='2.2', detector='AGIPD',
-              raw=False, nsources=1, datagen='random', data_like='online', *,
-              debug=True):
-    """Karabo bridge server simulation.
-
-    Simulate a Karabo Bridge server and send random data from a detector,
-    either AGIPD or LPD.
-
-    Parameters
-    ----------
-    port: str
-        The port to on which the server is bound.
-    sock: str, optional
-        socket type - supported: REP, PUB, PUSH. Default is REP.
-    ser: str, optional
-        The serialization algorithm, default is msgpack.
-    version: str, optional
-        The container version of the serialized data.
-    detector: str, optional
-        The data format to send, default is AGIPD detector.
-    raw: bool, optional
-        Generate raw data output if True, else CORRECTED. Default is False.
-    nsources: int, optional
-        Number of sources.
-    datagen: string, optional
-        Generator function used to generate detector data. Default is random.
-    data_like: string optional ['online', 'file']
-        Data array axes ordering for Mhz detector.
-        The data arrays's axes can have different ordering on online data. The
-        calibration processing orders axes as (fs, ss, pulses), whereas
-        data in files have (pulses, ss, fs).
-        This option allow to chose between 2 ordering:
-        - online: (modules, fs, ss, pulses)
-        - file: (pulses, modules, ss, fs)
-        Note that the real system can send data in both shape with a
-        performance penalty for the file-like array shape.
-
-        Default is online.
-    """
-    endpoint = f'tcp://*:{port}'
-    sender = Sender(
-        endpoint, sock=sock, ser=ser, protocol_version=version,
-        detector=detector, raw=raw, nsources=nsources, datagen=datagen,
-        data_like=data_like, debug=debug
-    )
-    try:
-        sender.loop()
-    except KeyboardInterrupt:
-        pass
-    print('\nStopped.')
-
-
-class ServeInThread(Thread):
-    def __init__(self, endpoint, sock='REP', ser='msgpack',
-                 protocol_version='2.2', detector='AGIPD', raw=False,
-                 nsources=1, datagen='random', data_like='online', *,
-                 debug=True):
-        super().__init__()
-
-        self.sender = Sender(
-            endpoint, sock=sock, ser=ser, protocol_version=protocol_version,
-            detector=detector, raw=raw, nsources=nsources, datagen=datagen,
-            data_like=data_like, debug=debug
-        )
-
-    def run(self):
-        self.sender.loop()
-
-    def stop(self):
-        self.sender.stopper_w.send(b'')
-        self.join()
-        self.sender.zmq_context.destroy(linger=0)
-
-    def __enter__(self):
-        self.start()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop()

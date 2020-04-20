@@ -39,9 +39,9 @@ __version__ = "0.5.0"
 from .cli import *
 from .client import *
 from .serializer import *
-from .simulation import *
+from .server import *
 
 
 __all__ = (client.__all__ +
-           simulation.__all__ +
-           serializer.__all__)
+           serializer.__all__ +
+           server.__all__)
