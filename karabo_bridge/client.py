@@ -8,7 +8,10 @@ All rights reserved.
 You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
+from functools import partial
+import signal
 
+import msgpack
 import zmq
 
 from .serializer import deserialize
@@ -57,33 +60,69 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, sock='REQ', ser='msgpack', timeout=None,
-                 context=None):
+    def __init__(self, endpoint, timeout=None, context=None):
+        # TODO
+        # [ ] ask for devices
+        # [ ] ask for keys/channels for device
+        # [ ] server as MDL?
+        #   [ ] handles several client connections
+        #   [ ] spawn bound device per channel connection (client select shared/copy)
 
-        if ser != 'msgpack':
-            raise Exception('Only serialization supported is msgpack')
+        self.dumps = msgpack.Packer(use_bin_type=True).pack
+        self.loads = partial(msgpack.loads, raw=False,
+                             max_bin_len=0x7fffffff)
+        self.monitored = set()
 
-        self._context = context or zmq.Context()
-        self._socket = None
+        self.ctx = context or zmq.Context()
+        self.request = self.ctx.socket(zmq.PAIR)
+        self.request.setsockopt(zmq.SNDTIMEO, 5000)
+        self.request.setsockopt(zmq.RCVTIMEO, 5000)
+        self.request.setsockopt(zmq.LINGER, 0)
+        self.request.connect(endpoint)
 
-        if sock == 'PULL':
-            self._socket = self._context.socket(zmq.PULL)
-        elif sock == 'REQ':
-            self._socket = self._context.socket(zmq.REQ)
-        elif sock == 'SUB':
-            self._socket = self._context.socket(zmq.SUB)
-            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
-        else:
-            raise NotImplementedError('Unsupported socket: %s' % str(sock))
-        self._socket.setsockopt(zmq.LINGER, 0)
-        self._socket.set_hwm(1)
-        self._socket.connect(endpoint)
+        # get socket interfaces for slow and pipeline data
+        msg = self.ask({'request': 'hello'})
 
-        if timeout is not None:
-            self._socket.setsockopt(zmq.RCVTIMEO, int(timeout * 1000))
-        self._recv_ready = False
+        self.data = self.ctx.socket(zmq.PULL)
+        self.data.set_hwm(50)
+        if timeout:
+            self.request.setsockopt(zmq.RCVTIMEO, int(1000 * timeout))
+        self.data.connect(msg['data_addr'])
+        self.data.connect(msg['pipe_addr'])
+        # self.poller = zmq.Poller()
+        # self.timeout = timeout
+        # self._connect()
 
-        self._pattern = self._socket.TYPE
+        self._heartbeat()  # start pinging server
+
+    # def _connect(self):
+    #     # get socket interfaces for slow and pipeline data
+    #     msg = self.ask({'request': 'hello'})
+
+    #     self.data = self.ctx.socket(zmq.PULL)
+    #     self.data.connect(msg['data_addr'])
+    #     self.pipe = self.ctx.socket(zmq.PULL)
+    #     self.pipe.set_hwm(5)
+    #     self.pipe.connect(msg['pipe_addr'])
+    #     self.poller.register(self.data, zmq.POLLIN)
+    #     self.poller.register(self.pipe, zmq.POLLIN)
+
+    def _heartbeat(self):
+        def ping(signum, frame):
+            self.ask({'request': 'ping'})
+            signal.alarm(10)
+        signal.signal(signal.SIGALRM, ping)
+        signal.alarm(10)
+
+    def ask(self, msg):
+        self.request.send(self.dumps(msg))
+        reply = self.loads(self.request.recv())
+        if reply['status'] == 'failure':
+            raise RuntimeError(reply['error'])
+        return reply
+
+    def set_hwm(self):
+        self.data.set_hwm(2*len(self.monitored))
 
     def next(self):
         """Request next data container.
@@ -106,24 +145,57 @@ class Client:
         TimeoutError
             If timeout is reached before receiving data.
         """
-        if self._pattern == zmq.REQ and not self._recv_ready:
-            self._socket.send(b'next')
-            self._recv_ready = True
         try:
-            msg = self._socket.recv_multipart(copy=False)
+            return deserialize(self.data.recv_multipart(copy=False))
         except zmq.error.Again:
-            raise TimeoutError(
-                'No data received from {} in the last {} ms'.format(
-                    self._socket.getsockopt_string(zmq.LAST_ENDPOINT),
-                    self._socket.getsockopt(zmq.RCVTIMEO)))
-        self._recv_ready = False
-        return deserialize(msg)
+            raise TimeoutError
+
+    def monitor_property(self, device, key):
+        """Start monitoring a device property.
+
+        :device: device name
+        :key: name of the property to monitor
+        """
+        self.ask({'request': 'add_property_monitor',
+                  'device': device, 'key': key})
+        self.monitored.add(f'{device}/{key}')
+        self.set_hwm()
+
+    def monitor_channel(self, device, channel):
+        """Start monitoring an output channel
+
+        :device: name of the device
+        :channel: name of the output channel to monitor
+        """
+        self.ask({'request': 'add_channel_monitor',
+                  'channel': f'{device}:{channel}'})
+        self.monitored.add(f'{device}:{channel}')
+        self.set_hwm()
+
+    def forget_property(self, device, key):
+        """Stop monitoring a device property
+        
+        :device: device name
+        :key: name of the property to stop monitoring
+        """
+        self.ask({'request': 'remove_property_monitor',
+                  'device': device, 'key': key})
+        self.monitored.discard(f'{device}/{key}')
+        self.set_hwm()
+
+    def forget_channel(self, device, channel):
+        self.ask({'request': 'remove_channel_monitor',
+                  'channel': f'{device}:{channel}'})
+        self.monitored.discard(f'{device}:{channel}')
+        self.set_hwm()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._context.destroy(linger=0)
+        # FIXME
+        self.ask({'request': 'bye'})
+        self.ctx.destroy(linger=0)
 
     def __iter__(self):
         return self
