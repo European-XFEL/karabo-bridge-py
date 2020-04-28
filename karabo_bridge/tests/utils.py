@@ -26,4 +26,4 @@ def compare_nested_dict(d1, d2, path=''):
                 else:
                     assert v1 == v2
             except AssertionError:
-                raise ValueError('diff: {}{}'.format(path, key), v1, v2)
+                raise AssertionError('diff: {}{}'.format(path, key), v1, v2)
