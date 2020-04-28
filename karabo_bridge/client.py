@@ -9,7 +9,10 @@ You should have received a copy of the 3-Clause BSD License along with this
 program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 from functools import partial
+from getpass import getuser
 import signal
+from socket import gethostname
+from time import time
 
 import msgpack
 import zmq
@@ -75,37 +78,26 @@ class Client:
 
         self.ctx = context or zmq.Context()
         self.request = self.ctx.socket(zmq.PAIR)
-        self.request.setsockopt(zmq.SNDTIMEO, 5000)
-        self.request.setsockopt(zmq.RCVTIMEO, 5000)
+        self.request.SNDTIMEO = 5000
+        self.request.RCVTIMEO = 5000
         self.request.setsockopt(zmq.LINGER, 0)
         self.request.connect(endpoint)
 
-        # get socket interfaces for slow and pipeline data
-        msg = self.ask({'request': 'hello'})
-
-        self.data = self.ctx.socket(zmq.PULL)
-        self.data.set_hwm(50)
-        if timeout:
-            self.request.setsockopt(zmq.RCVTIMEO, int(1000 * timeout))
-        self.data.connect(msg['data_addr'])
-        self.data.connect(msg['pipe_addr'])
-        # self.poller = zmq.Poller()
-        # self.timeout = timeout
-        # self._connect()
+        self.data = None
+        self._connect(timeout)
 
         self._heartbeat()  # start pinging server
 
-    # def _connect(self):
-    #     # get socket interfaces for slow and pipeline data
-    #     msg = self.ask({'request': 'hello'})
-
-    #     self.data = self.ctx.socket(zmq.PULL)
-    #     self.data.connect(msg['data_addr'])
-    #     self.pipe = self.ctx.socket(zmq.PULL)
-    #     self.pipe.set_hwm(5)
-    #     self.pipe.connect(msg['pipe_addr'])
-    #     self.poller.register(self.data, zmq.POLLIN)
-    #     self.poller.register(self.pipe, zmq.POLLIN)
+    def _connect(self, timeout=None):
+        # receive socket interfaces for slow and pipeline data
+        msg = self.ask({'request': 'hello', 'hostname': gethostname(),
+                        'username': getuser(), 'timestamp': time()})
+        self.data = self.ctx.socket(zmq.PULL)
+        self.data.set_hwm(50)
+        if timeout is not None:
+            self.request.RCVTIMEO = int(1000 * timeout)
+        self.data.connect(msg['data_addr'])
+        self.data.connect(msg['pipe_addr'])
 
     def _heartbeat(self):
         def ping(signum, frame):
@@ -193,7 +185,7 @@ class Client:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # FIXME
+        signal.alarm(0)  # disables ping
         self.ask({'request': 'bye'})
         self.ctx.destroy(linger=0)
 
