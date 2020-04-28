@@ -7,7 +7,7 @@ from time import time
 import zmq
 
 from .serializer import serialize
-from .simulation import DataGenerator
+from .simulation import data_generator
 
 
 __all__ = ['ServerInThread', 'start_gen']
@@ -74,7 +74,7 @@ class SimServer(Sender):
         if ser != 'msgpack':
             raise ValueError("Unknown serialisation format %s" % ser)
 
-        self.data = DataGenerator(
+        self.data = data_generator(
             detector=detector, raw=raw, nsources=nsources, datagen=datagen,
             data_like=data_like, debug=debug)
         self.debug = debug
@@ -104,7 +104,7 @@ class SimServer(Sender):
                 t_prev = t_now
 
 
-class ServerInThread(Sender, Thread):
+class ServerInThread(Sender):
     def __init__(self, endpoint, sock='REP', maxlen=10, protocol_version='2.2',
                  dummy_timestamps=False):
         """ZeroMQ interface sending data over a TCP socket.
@@ -141,9 +141,10 @@ class ServerInThread(Sender, Thread):
             in the file, so this option generates fake timestamps from the time
             the data is fed in.
         """
-        Thread.__init__(self)
         super().__init__(endpoint, sock=sock, protocol_version=protocol_version,
                          dummy_timestamps=dummy_timestamps)
+        self.thread = Thread(target=self._run)
+        self.thread.daemon = True
         self.buffer = Queue(maxsize=maxlen)
 
     def feed(self, data, metadata=None, block=True, timeout=None):
@@ -174,17 +175,20 @@ class ServerInThread(Sender, Thread):
         """
         self.buffer.put((data, metadata), block=block, timeout=timeout)
 
-    def run(self):
+    def _run(self):
         while True:
             done = self.send(*self.buffer.get())
             if done:
                 break
 
+    def start(self):
+        self.thread.start()
+
     def stop(self):
         self.stopper_w.send(b'')
         if self.buffer.qsize() == 0:
             self.buffer.put(({},))  # release blocking queue
-        self.join()
+        self.thread.join()
         self.zmq_context.destroy(linger=0)
 
     def __enter__(self):
@@ -196,7 +200,7 @@ class ServerInThread(Sender, Thread):
 
 
 class SimServerInThread(SimServer, ServerInThread):
-    def run(self):
+    def _run(self):
         self.loop()
 
 
