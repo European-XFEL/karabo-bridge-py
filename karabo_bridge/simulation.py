@@ -11,6 +11,7 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 
 import copy
+from itertools import count
 from time import time
 
 import numpy as np
@@ -177,23 +178,18 @@ class LPD(Detector):
     ])
 
 
-class DataGenerator:
-    def __init__(self, detector='AGIPD', raw=False, nsources=1,
-                 datagen='random', data_like='online', *, debug=False):
-        self.detector = Detector.getDetector(
-            detector, raw=raw, gen=datagen, data_like=data_like)
-        self.nsources = nsources
-        self.tid_counter = 10000000000
+def data_generator(detector='AGIPD', raw=False, nsources=1, datagen='random',
+                   data_like='online', *, debug=False):
 
-    def __iter__(self):
-        return self
+    detector = Detector.getDetector(detector, raw=raw, gen=datagen,
+                                    data_like=data_like)
 
-    def __next__(self):
-        data, meta = self.detector.gen_data(self.tid_counter)
+    for train_id in count(start=10000000000):
+        data, meta = detector.gen_data(train_id)
 
-        if self.nsources > 1:
-            source = self.detector.source
-            for i in range(self.nsources):
+        if nsources > 1:
+            source = detector.source
+            for i in range(nsources):
                 src = source + "-" + str(i+1)
                 data[src] = copy.deepcopy(data[source])
                 meta[src] = copy.deepcopy(meta[source])
@@ -201,7 +197,4 @@ class DataGenerator:
             del data[source]
             del meta[source]
 
-        self.tid_counter += 1
-        return data, meta
-
-
+        yield (data, meta)
