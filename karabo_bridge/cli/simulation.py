@@ -1,6 +1,6 @@
 import argparse
 
-from karabo_bridge.simulation import start_gen
+from karabo_bridge.server import start_gen
 
 
 def main(argv=None):
