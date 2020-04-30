@@ -2,7 +2,7 @@
 """
 
 import argparse
-from collections import Sequence
+from collections.abc import Sequence
 from datetime import datetime
 import h5py
 import numpy as np

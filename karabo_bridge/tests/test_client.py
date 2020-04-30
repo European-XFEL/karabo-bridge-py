@@ -5,23 +5,17 @@ import pytest
 from karabo_bridge import Client
 
 
-def test_get_frame(sim_server):
-    c = Client(sim_server)
+def test_get_frame(sim_server, protocol_version):
+    c = Client(sim_server.endpoint)
     data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
-
-
-def test_protocol_1(sim_server_version_1):
-    c = Client(sim_server_version_1)
-    data, metadata = c.next()
-    assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
-    assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
-    assert all('metadata' in src for src in data.values())
+    if protocol_version == '1.0':
+        assert all('metadata' in src for src in data.values())
 
 
 def test_pull_socket(sim_push_server):
-    c = Client(sim_push_server, sock='PULL')
+    c = Client(sim_push_server.endpoint, sock='PULL')
     data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
@@ -33,7 +27,7 @@ def test_pair_socket(sim_server):
 
 
 def test_context_manager(sim_server):
-    with Client(sim_server) as c:
+    with Client(sim_server.endpoint) as c:
         data, metadata = c.next()
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in data
     assert 'SPB_DET_AGIPD1M-1/DET/0CH0:xtdf' in metadata
@@ -41,7 +35,7 @@ def test_context_manager(sim_server):
 
 
 def test_iterator(sim_server):
-    c = Client(sim_server)
+    c = Client(sim_server.endpoint)
     for i, (data, metadata) in enumerate(islice(c, 3)):
         trainId = metadata['SPB_DET_AGIPD1M-1/DET/0CH0:xtdf']['timestamp.tid']
         assert trainId == 10000000000 + i
