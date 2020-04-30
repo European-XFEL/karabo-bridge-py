@@ -143,8 +143,7 @@ class ServerInThread(Sender):
         """
         super().__init__(endpoint, sock=sock, protocol_version=protocol_version,
                          dummy_timestamps=dummy_timestamps)
-        self.thread = Thread(target=self._run)
-        self.thread.daemon = True
+        self.thread = Thread(target=self._run, daemon=True)
         self.buffer = Queue(maxsize=maxlen)
 
     def feed(self, data, metadata=None, block=True, timeout=None):
