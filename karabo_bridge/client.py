@@ -10,9 +10,9 @@ program. If not, see <https://opensource.org/licenses/BSD-3-Clause>
 """
 from functools import partial
 from getpass import getuser
-import signal
 from socket import gethostname
-from time import time
+from threading import Thread
+from time import sleep, time
 
 import msgpack
 import zmq
@@ -86,7 +86,9 @@ class Client:
         self.data = None
         self._connect(timeout)
 
-        self._heartbeat()  # start pinging server
+        self.connected = True
+        self._hb = Thread(target=self._heartbeat, daemon=True)
+        self._hb.start()  # start pinging server
 
     def _connect(self, timeout=None):
         # receive socket interfaces for slow and pipeline data
@@ -100,11 +102,9 @@ class Client:
         self.data.connect(msg['pipe_addr'])
 
     def _heartbeat(self):
-        def ping(signum, frame):
+        while self.connected:
+            sleep(10)
             self.ask({'request': 'ping'})
-            signal.alarm(10)
-        signal.signal(signal.SIGALRM, ping)
-        signal.alarm(10)
 
     def ask(self, msg):
         self.request.send(self.dumps(msg))
@@ -185,9 +185,9 @@ class Client:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        signal.alarm(0)  # disables ping
         self.ask({'request': 'bye'})
         self.ctx.destroy(linger=0)
+        self.connected = False  # disables ping
 
     def __iter__(self):
         return self
