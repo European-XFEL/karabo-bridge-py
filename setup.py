@@ -24,7 +24,7 @@ def find_version(*parts):
 setup(name="karabo_bridge",
       version=find_version("karabo_bridge", "__init__.py"),
       author="European XFEL GmbH",
-      author_email="cas-support@xfel.eu",
+      author_email="da-support@xfel.eu",
       maintainer="Thomas Michelat",
       url="https://github.com/European-XFEL/karabo-bridge-py",
       description=("Python 3 tools to request data from the Karabo control"
