@@ -107,7 +107,10 @@ class Client:
             self.ask({'request': 'ping'})
 
     def ask(self, msg):
-        self.request.send(self.dumps(msg))
+        try:
+            self.request.send(self.dumps(msg))
+        except zmq.error.Again:
+            raise TimeoutError(f"Could not reach {self.request.LAST_ENDPOINT}")
         reply = self.loads(self.request.recv())
         if reply['status'] == 'failure':
             raise RuntimeError(reply['error'])
