@@ -100,6 +100,7 @@ class Client:
             self.request.RCVTIMEO = int(1000 * timeout)
         self.data.connect(msg['data_addr'])
         self.data.connect(msg['pipe_addr'])
+        self.ask({'request': 'hello', 'status': 'connected'})
 
     def _heartbeat(self):
         while self.connected:
@@ -111,7 +112,12 @@ class Client:
             self.request.send(self.dumps(msg))
         except zmq.error.Again:
             raise TimeoutError(f"Could not reach {self.request.LAST_ENDPOINT}")
-        reply = self.loads(self.request.recv())
+
+        try:
+            reply = self.loads(self.request.recv())
+        except zmq.error.Again:
+            raise TimeoutError(f'No reply from server')
+
         if reply['status'] == 'failure':
             raise RuntimeError(reply['error'])
         return reply
