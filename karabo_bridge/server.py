@@ -81,7 +81,7 @@ class SimServer(Sender):
 
     def loop(self):
         print(f'Simulated Karabo-bridge server started on:\n'
-              f'tcp://{self.endpoint}')
+              f'{self.endpoint}')
 
         timing_interval = 50
         t_prev = time()
