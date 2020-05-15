@@ -84,23 +84,27 @@ class Client:
         self.request.connect(endpoint)
 
         self.data = None
-        self._connect(timeout)
+        self.timeout = timeout
+        self.connected = False
+        self._hb = None
 
-        self.connected = True
-        self._hb = Thread(target=self._heartbeat, daemon=True)
-        self._hb.start()  # start pinging server
-
-    def _connect(self, timeout=None):
+    def connect(self):
+        if self.connected:
+            raise RuntimeError('Client is already connected')
         # receive socket interfaces for slow and pipeline data
         msg = self.ask({'request': 'hello', 'hostname': gethostname(),
                         'username': getuser(), 'timestamp': time()})
         self.data = self.ctx.socket(zmq.PULL)
         self.data.set_hwm(50)
-        if timeout is not None:
-            self.request.RCVTIMEO = int(1000 * timeout)
+        if self.timeout is not None:
+            self.request.RCVTIMEO = int(1000 * self.timeout)
         self.data.connect(msg['data_addr'])
         self.data.connect(msg['pipe_addr'])
         self.ask({'request': 'hello', 'status': 'connected'})
+
+        self._hb = Thread(target=self._heartbeat, daemon=True)
+        self._hb.start()  # start pinging server
+        self.connected = True
 
     def _heartbeat(self):
         while self.connected:
@@ -190,13 +194,16 @@ class Client:
         self.monitored.discard(f'{device}:{channel}')
         self.set_hwm()
 
-    def __enter__(self):
+    def __enter__(self, connect=True):
+        if connect:
+            self.connect()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.ask({'request': 'bye'})
-        self.ctx.destroy(linger=0)
-        self.connected = False  # disables ping
+        if self.connected:
+            self.ask({'request': 'bye'})
+            self.ctx.destroy(linger=0)
+            self.connected = False  # disables ping
 
     def __iter__(self):
         return self
