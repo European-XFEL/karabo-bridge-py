@@ -63,7 +63,7 @@ class Client:
     ZMQError
         if provided endpoint is not valid.
     """
-    def __init__(self, endpoint, timeout=None, context=None):
+    def __init__(self, endpoint, timeout=None, context=None, connect=True):
         # TODO
         # [ ] ask for devices
         # [ ] ask for keys/channels for device
@@ -87,6 +87,9 @@ class Client:
         self.timeout = timeout
         self.connected = False
         self._hb = None
+
+        if connect:
+            self.connect()
 
     def connect(self):
         if self.connected:
@@ -194,9 +197,7 @@ class Client:
         self.monitored.discard(f'{device}:{channel}')
         self.set_hwm()
 
-    def __enter__(self, connect=True):
-        if connect:
-            self.connect()
+    def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
