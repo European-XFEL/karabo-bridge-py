@@ -100,7 +100,7 @@ class Client:
         self.data = self.ctx.socket(zmq.PULL)
         self.data.set_hwm(50)
         if self.timeout is not None:
-            self.request.RCVTIMEO = int(1000 * self.timeout)
+            self.data.RCVTIMEO = int(1000 * self.timeout)
         self.data.connect(msg['data_addr'])
         self.data.connect(msg['pipe_addr'])
         self.ask({'request': 'hello', 'status': 'connected'})
