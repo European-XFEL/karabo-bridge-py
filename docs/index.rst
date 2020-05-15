@@ -33,6 +33,7 @@ If you get a permissions error, add the ``--user`` flag to that command.
 
    protocol
    cli
+   euxfel
 
 
 .. toctree::

@@ -143,10 +143,10 @@ number of keys with a common prefix. This keys following this prefix include:
 - ``.encoding`` str
 - ``.geometry.alignment.offsets`` list of float
 - ``.geometry.alignment.rotations`` list of float
-- ``.geometry.pixelRegion`` list of int - seems optional
-- ``.geometry.subAssemblies`` list of hashes - seems optional
+- ``.geometry.pixelRegion`` list of int
+- ``.geometry.subAssemblies`` list of dict
 - ``.geometry.tileId`` int
-- ``.header`` user defined Hash
+- ``.header`` user defined dict
 - ``.ROIOffsets``  list of int
 - ``.binning`` list of int
 
