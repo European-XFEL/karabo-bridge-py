@@ -105,9 +105,9 @@ class Client:
         self.data.connect(msg['pipe_addr'])
         self.ask({'request': 'hello', 'status': 'connected'})
 
+        self.connected = True
         self._hb = Thread(target=self._heartbeat, daemon=True)
         self._hb.start()  # start pinging server
-        self.connected = True
 
     def _heartbeat(self):
         while self.connected:
