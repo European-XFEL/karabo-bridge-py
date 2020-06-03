@@ -24,3 +24,4 @@ data from the Karabo bridge.
 
 
 .. autofunction:: deserialize
+

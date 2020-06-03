@@ -130,7 +130,7 @@ followed by zero or more header-data pairs for arrays.
   Moved metadata from the data to the header.
 
 Image data
-~~~~~~~~~~
+----------
 
 Karabo ``ImageData`` objects, holding images from cameras, are represented by a
 number of keys with a common prefix. This keys following this prefix include:
@@ -164,4 +164,4 @@ Servers:
 
 * `PipeToZeroMQ Karabo device <https://in.xfel.eu/gitlab/karaboDevices/PipeToZeroMQ>`_:
   sends data from a live Karabo system.
-* The `Python client`_ includes a server to send simulated random data.
+* The `Python client`_ includes a :ref:`server <cmd-server-sim>` to send simulated random data.

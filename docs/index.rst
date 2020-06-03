@@ -11,21 +11,11 @@ We provide additionally a `c++ client
 <https://github.com/European-XFEL/karabo-bridge-cpp>`__, but you can also write
 your own code to receive the data if necessary.
 
-Installation
-------------
 
-karabo-bridge-py is available on our Anaconda installation on the Maxwell cluster
-and online cluster::
+.. toctree::
+   :caption: Installation
 
-    module load exfel exfel_anaconda3
-
-You can also install it `from PyPI <https://pypi.org/project/karabo-bridge-py/>`__
-to use in other environments with Python 3.6 or later::
-
-    pip install karabo_bridge
-
-If you get a permissions error, add the ``--user`` flag to that command.
-
+   installation
 
 .. toctree::
    :caption: Description and Tools
@@ -34,7 +24,6 @@ If you get a permissions error, add the ``--user`` flag to that command.
    protocol
    cli
    euxfel
-
 
 .. toctree::
    :caption: Reference

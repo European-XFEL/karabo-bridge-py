@@ -5,5 +5,5 @@ User tools running on European XFEL Online clusters can use the Karabo Bridge AP
 
 Karabo bridge devices (from which karabo bridge clients can connect to and receive data) are running at all instruments.
 
-Detailed setup for each instrument is available `here<https://in.xfel.eu/readthedocs/docs/data-analysis-user-documentation/en/latest/online.html#how-to-use-it-at-the-euxfel>`__.
+Detailed setup for each instrument is available `here <https://in.xfel.eu/readthedocs/docs/data-analysis-user-documentation/en/latest/online.html#how-to-use-it-at-the-euxfel>`__.
 
