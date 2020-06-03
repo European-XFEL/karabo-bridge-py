@@ -4,7 +4,7 @@ Release Notes
 0.6.0
 -----
 
-- Move server implementation from Extra-data to this package (#58)
+- Move server implementation from Extra-data to this package (:ghpull:`58`)
 
 0.5.0
 -----
