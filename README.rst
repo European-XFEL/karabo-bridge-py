@@ -2,8 +2,8 @@
 European XFEL Karabo Bridge
 ===========================
 
-.. image:: https://travis-ci.org/European-XFEL/karabo-bridge-py.svg?branch=master
-  :target: https://travis-ci.org/European-XFEL/karabo-bridge-py
+.. image:: https://github.com/European-XFEL/karabo-bridge-py/workflows/Tests/badge.svg
+  :target: https://github.com/European-XFEL/karabo-bridge-py/actions?query=workflow%3ATests
 
 .. image:: https://codecov.io/gh/European-XFEL/karabo-bridge-py/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/European-XFEL/karabo-bridge-py
