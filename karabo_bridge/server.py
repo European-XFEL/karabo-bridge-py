@@ -54,7 +54,7 @@ class Sender:
             self.stopper_r.recv()
             return True
 
-        if events[self.server_socket] is zmq.POLLIN:
+        if events[self.server_socket] == zmq.POLLIN:
             msg = self.server_socket.recv()
             if msg != b'next':
                 print(f'Unrecognised request: {msg}')
