@@ -41,19 +41,20 @@ class Client:
     context : zmq.Context
         To run the Client's sockets using a provided ZeroMQ context.
     timeout : int
-        Timeout on :method:`next` (in seconds)
+        Timeout on :meth:`next` (in seconds)
 
         Data transfered at the EuXFEL for Mega-pixels detectors can be very
         large. Setting a too small timeout might end in never getting data.
         Some example of transfer timing for 1Mpix detector (AGIPD, LPD):
-            32 pulses per train (125 MB): ~0.1 s
-            128 pulses per train (500 MB): ~0.4 s
-            350 pulses per train (1.37 GB): ~1 s
+
+           - 32 pulses per train (125 MB): ~0.1 s
+           - 128 pulses per train (500 MB): ~0.4 s
+           - 350 pulses per train (1.37 GB): ~1 s
 
     Raises
     ------
     NotImplementedError
-        if socket type or serialization algorythm is not supported.
+        if socket type or serialization algorithm is not supported.
     ZMQError
         if provided endpoint is not valid.
     """
