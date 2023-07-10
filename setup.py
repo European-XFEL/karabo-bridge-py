@@ -38,6 +38,7 @@ setup(name="karabo_bridge",
           'pyzmq>=17.0.0',
       ],
       extras_require={
+          'qt': ['QtPy'],
           'test': [
               'pytest',
               'pytest-cov',
