@@ -1,6 +1,6 @@
 from karabo_bridge.qt import QBridgeClient
 
-def test_receive_n(sim_server, qtbot):
+def test_receive_n(sim_server, qtbot, qapp):
     qbc = QBridgeClient(sim_server.endpoint)
     results = []
     def data_received(data, metadata):
@@ -10,6 +10,8 @@ def test_receive_n(sim_server, qtbot):
     with qtbot.waitSignal(qbc.stopped, timeout=5000):
         qbc.start(stop_after=2)
         assert qbc.is_active
+
+    qapp.processEvents()
 
     assert not qbc.is_active
 
@@ -21,6 +23,8 @@ def test_receive_n(sim_server, qtbot):
     # Check that we can start receiving again after stopping
     with qtbot.waitSignal(qbc.stopped, timeout=5000):
         qbc.start(stop_after=2)
+
+    qapp.processEvents()
 
     assert len(results) == 4
 
