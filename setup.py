@@ -45,6 +45,8 @@ setup(name="karabo_bridge",
               'pytest-qt',
               'h5py',
               'testpath',
+              'QtPy',
+              'PyQt5',
           ]
       },
       packages=find_packages(),
