@@ -35,7 +35,7 @@ class Worker(QThread):
         if self.sock_type == zmq.REQ:
             data_sock.send(b'next')
 
-        for i in count():
+        for i in count(start=1):
             ready = [sock for (sock, _) in poller.poll()]
             if ctrl_sock in ready:
                 _ = ctrl_sock.recv()
