@@ -10,14 +10,14 @@ from .serializer import deserialize
 class Worker(QThread):
     data_queued = Signal()
 
-    def __init__(self, endpoint, sock_type, ctrl_endpoint, stop_after=0,
+    def __init__(self, endpoint, sock_type, ctrl_endpoint, queue, stop_after=0,
                  parent=None):
         super().__init__(parent)
         self.endpoint = endpoint
         self.sock_type = sock_type
         self.ctrl_endpoint = ctrl_endpoint
         self.stop_after = stop_after
-        self.queue = queue.Queue(maxsize=5)
+        self.queue = queue
 
     def run(self):
         ctx = zmq.Context.instance()
@@ -72,6 +72,7 @@ class QBridgeClient(QObject):
         if sock not in {'REQ', 'PULL', 'SUB'}:
             raise ValueError("sock must be 'REQ', 'PULL' or 'SUB'")
         self.sock_type = getattr(zmq, sock)
+        self.queue = queue.Queue(maxsize=5)
 
     def set_endpoint(self, endpoint, sock='REQ'):
         """Change the ZMQ socket to receive data from
@@ -96,7 +97,8 @@ class QBridgeClient(QObject):
             raise RuntimeError("QBridgeClient is already running")
         self.ctrl_endpoint = f'inproc://{token_hex(20)}'
         self.worker = worker = Worker(
-            self.endpoint, self.sock_type, self.ctrl_endpoint, stop_after, parent=self,
+            self.endpoint, self.sock_type, self.ctrl_endpoint, self.queue,
+            stop_after=stop_after, parent=self,
         )
         worker.data_queued.connect(self._start_dequeueing)
         worker.finished.connect(worker.deleteLater)
@@ -120,12 +122,8 @@ class QBridgeClient(QObject):
             QTimer.singleShot(0, self._dequeue_one)
 
     def _dequeue_one(self):
-        if self.worker is None:
-            self._dequeuing = False
-            return
-
         try:
-            data, metadata = self.worker.queue.get_nowait()
+            data, metadata = self.queue.get_nowait()
         except queue.Empty:
             self._dequeuing = False
             return
@@ -146,7 +144,7 @@ class QBridgeClient(QObject):
         # Drain the queue to ensure the worker isn't stuck in .put()
         while True:
             try:
-                self.worker.queue.get_nowait()
+                self.queue.get_nowait()
             except queue.Empty:
                 break
 
