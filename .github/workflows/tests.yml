@@ -40,7 +40,8 @@ jobs:
 
     - name: Test with pytest
       run: |
-        xvfb-run python3 -m pytest -v --cov=karabo_bridge
+        export QT_DEBUG_PLUGINS=1
+        xvfb-run python3 -m pytest -vs --cov=karabo_bridge
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
