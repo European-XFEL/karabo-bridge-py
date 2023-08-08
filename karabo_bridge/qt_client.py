@@ -73,7 +73,25 @@ class QBridgeClient(QObject):
             raise ValueError("sock must be 'REQ', 'PULL' or 'SUB'")
         self.sock_type = getattr(zmq, sock)
 
+    def set_endpoint(self, endpoint, sock='REQ'):
+        """Change the ZMQ socket to receive data from
+
+        If ``.start()`` was already called, you need to stop & start the client
+        again for this to take effect.
+        """
+        self.endpoint = endpoint
+        if sock not in {'REQ', 'PULL', 'SUB'}:
+            raise ValueError("sock must be 'REQ', 'PULL' or 'SUB'")
+        self.sock_type = getattr(zmq, sock)
+
     def start(self, stop_after=0):
+        """Start receiving data
+
+        Connect to the ``new_data`` signal to handle incoming data.
+
+        If stop_after > 0, it will automatically stop once N trains have been
+        received. Otherwise, it continues until ``.stop()`` is called.
+        """
         if self.worker is not None:
             raise RuntimeError("QBridgeClient is already running")
         self.ctrl_endpoint = f'inproc://{token_hex(20)}'
@@ -116,6 +134,7 @@ class QBridgeClient(QObject):
         QTimer.singleShot(0, self._dequeue_one)
 
     def stop(self):
+        """Stop receiving data"""
         if self.worker is None:
             return
 
