@@ -23,11 +23,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache APT Packages
-      uses: awalsh128/cache-apt-pkgs-action@v1.3.0
-      with:
-        packages: xvfb
-
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip
@@ -40,9 +35,8 @@ jobs:
 
     - name: Test with pytest
       run: |
-        export QT_QPA_PLATFORM=offscreen
-        export QT_DEBUG_PLUGINS=1
-        python3 -m pytest -vs --cov=karabo_bridge
+        export QT_QPA_PLATFORM=offscreen  # No GUI required
+        python3 -m pytest -v --cov=karabo_bridge
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
