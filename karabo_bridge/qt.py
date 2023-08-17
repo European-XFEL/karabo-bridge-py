@@ -101,7 +101,6 @@ class QBridgeClient(QObject):
             stop_after=stop_after, parent=self,
         )
         worker.data_queued.connect(self._start_dequeueing)
-        worker.finished.connect(worker.deleteLater)
         worker.finished.connect(self._worker_finished)
         worker.start()
 
@@ -149,5 +148,6 @@ class QBridgeClient(QObject):
                 break
 
     def _worker_finished(self):
+        self.worker.deleteLater()
         self.worker = None
         self.stopped.emit()
