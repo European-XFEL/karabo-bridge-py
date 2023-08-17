@@ -63,7 +63,7 @@ class QBridgeClient(QObject):
     ctrl_endpoint = None
     _dequeuing = False
 
-    new_data = Signal(object, object)
+    new_data = Signal(dict, dict)
     stopped = Signal()
 
     def __init__(self, endpoint, sock='REQ', parent=None):
