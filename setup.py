@@ -38,11 +38,15 @@ setup(name="karabo_bridge",
           'pyzmq>=17.0.0',
       ],
       extras_require={
+          'qt': ['QtPy'],
           'test': [
               'pytest',
               'pytest-cov',
+              'pytest-qt',
               'h5py',
               'testpath',
+              'QtPy',
+              'PyQt5',
           ]
       },
       packages=find_packages(),
