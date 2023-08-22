@@ -59,6 +59,17 @@ class Worker(QThread):
 
 
 class QBridgeClient(QObject):
+    """Karabo bridge client for use in Qt applications
+
+    Set this up pointing to an endpoint address which is sending Karabo bridge
+    data. This is in a format like 'tcp://localhost:45200'.
+    Connect to the new_data signal, which is emitted with the data & metadata
+    dictionaries for each message received. Then call .start() to receive data,
+    either for a set number of trains or until you call .stop().
+
+    This uses a thread, which can cause crashes if you close the application
+    while it's still running. You should call .stop() before it is deleted.
+    """
     worker = None
     ctrl_endpoint = None
     _dequeuing = False
