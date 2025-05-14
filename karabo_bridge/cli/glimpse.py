@@ -59,8 +59,10 @@ def walk_dict_to_hdf5(dic, h5):
             walk_dict_to_hdf5(value, group)
         elif isinstance(value, (np.ndarray)):
             h5.create_dataset(key, data=value, dtype=value.dtype)
-        elif isinstance(value, (int, float)):
-            h5.create_dataset(key, data=value, dtype=type(value))
+        elif isinstance(value, int):
+            h5.create_dataset(key, data=value, dtype=np.int64)
+        elif isinstance(value, float):
+            h5.create_dataset(key, data=value, dtype=np.float64)
         elif isinstance(value, str):
             # VLEN strings do not support embedded NULLs
             value = value.replace('\x00', '')
